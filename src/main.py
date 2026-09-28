@@ -138,15 +138,29 @@ async def create_registration(request: Request):
     ):
         return registration_result("Sicherheitsprüfung fehlgeschlagen", "Bitte gehe zurück und versuche es erneut.", status_code=400)
 
+    print("REGISTER stage=turnstile_ok")
     password_hash = hash_password(password)
     user_id = str(uuid.uuid4())
+    print("REGISTER stage=hash_ok")
 
     try:
-        await env.DB.prepare(
+        insert_result = await env.DB.prepare(
             "INSERT INTO users (id, email, birth_date, status, password_hash) VALUES (?, ?, ?, 'pending', ?)"
         ).bind(user_id, email, birth_date.isoformat(), password_hash).run()
+        print("REGISTER stage=insert_run")
+        saved = await env.DB.prepare(
+            "SELECT id, status FROM users WHERE id = ?"
+        ).bind(user_id).first()
+        print("REGISTER stage=insert_verified found=" + ("yes" if saved else "no"))
+        if not saved:
+            return registration_result(
+                "Speichern fehlgeschlagen",
+                "Das Konto konnte nicht bestätigt in der Datenbank gespeichert werden.",
+                status_code=500,
+            )
     except Exception as exc:
         # D1 enforces the unique email constraint. Do not expose database details.
+        print("REGISTER stage=insert_error type=" + type(exc).__name__)
         if "UNIQUE" in str(exc).upper():
             return registration_result(
                 "E-Mail bereits registriert",
@@ -155,6 +169,7 @@ async def create_registration(request: Request):
             )
         raise
 
+    print("REGISTER stage=complete")
     return registration_result(
         "Konto angelegt ✓",
         "Dein Konto wurde sicher angelegt. Als Nächstes aktivieren wir die E-Mail-Bestätigung.",
