@@ -4,6 +4,17 @@
 
 Build a local-first dating platform where users can find real nearby adults, state their intentions clearly and communicate without pay-per-message mechanics.
 
+Production hostname: `dating.samawi.co.uk`.
+
+## Platform
+
+Cloudflare-native:
+- Python Worker + FastAPI
+- D1 for relational application data
+- R2 for profile media
+- Turnstile for anti-bot protection
+- Durable Objects/WebSockets later for realtime chat
+
 ## MVP areas
 
 1. Accounts and 18+ registration
