@@ -1,0 +1,14 @@
+[project]
+name = "samawi-dating"
+version = "0.1.0"
+description = "SaMaWi Dating - local-first dating platform"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi",
+]
+
+[dependency-groups]
+dev = [
+    "workers-py",
+    "workers-runtime-sdk",
+]
