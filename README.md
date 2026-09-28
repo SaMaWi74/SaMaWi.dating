@@ -50,7 +50,9 @@ Deployment trigger: Cloudflare Git integration configured for Python Workers.
 - Initial D1 migration `migrations/0001_initial.sql` has been applied successfully
 - Landing page and registration UI are deployed
 - Turnstile widget configured for `dating.samawi.co.uk`; secret stored only as Cloudflare Worker secret `TURNSTILE_SECRET_KEY`
-- Registration now performs server-side 18+ gating and server-side Turnstile validation before any account data is persisted
+- Registration performs server-side 18+ gating and server-side Turnstile validation
+- Account creation code now stores only a salted PBKDF2 password hash and creates new users as `pending`
+- Migration `migrations/0002_credentials.sql` adds `password_hash` and `email_verified_at`; it must be applied to production D1 before testing account creation
 
 ### Product decisions
 - Platform is 18+ only.
@@ -62,7 +64,7 @@ Deployment trigger: Cloudflare Git integration configured for Python Workers.
 - SMW Donate/donations are explicitly deferred until the dating platform itself is stable and operational.
 
 ### Current task
-Complete secure account creation after the now-implemented Turnstile and 18+ registration gate.
+Apply `migrations/0002_credentials.sql` to production D1, test account creation, then implement email verification.
 
 Planned Turnstile widget:
 - Name: `samawi-dating-registration`
@@ -71,7 +73,7 @@ Planned Turnstile widget:
 - Pre-clearance / “Skip future security rule challenges for verified visitors”: OFF
 
 Next:
-1. Secure password handling and account creation.
+1. Apply and test credential migration/account creation.
 2. Email verification.
 3. Login/session handling.
 4. Profile creation and local discovery.
