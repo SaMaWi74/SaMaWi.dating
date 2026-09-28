@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import date
 import json
 import urllib.parse
-from js import fetch
+from workers import fetch
 from workers import asgi
 
 app = FastAPI(title="SaMaWi Dating", version="0.2.0")
@@ -73,11 +73,16 @@ def is_at_least_18(birth_date: date, today: date | None = None) -> bool:
 
 @app.post("/api/register")
 async def create_registration(request: Request):
-    form = await request.form()
-    email = str(form.get("email", "")).strip().lower()
-    birth_date_raw = str(form.get("birth_date", ""))
-    password = str(form.get("password", ""))
-    token = str(form.get("cf-turnstile-response", ""))
+    raw_body = (await request.body()).decode("utf-8")
+    parsed = urllib.parse.parse_qs(raw_body, keep_blank_values=True)
+    def field(name: str) -> str:
+        values = parsed.get(name, [""])
+        return str(values[0]) if values else ""
+
+    email = field("email").strip().lower()
+    birth_date_raw = field("birth_date")
+    password = field("password")
+    token = field("cf-turnstile-response")
 
     if not email or not birth_date_raw or len(password) < 10 or not token:
         return JSONResponse({"ok": False, "error": "Bitte alle Felder korrekt ausfüllen."}, status_code=400)
@@ -100,7 +105,7 @@ async def create_registration(request: Request):
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         body=body,
     )
-    verification = json.loads(await verification_response.text())
+    verification = dict(await verification_response.json())
 
     if (
         not verification.get("success")
