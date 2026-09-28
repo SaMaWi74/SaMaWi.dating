@@ -2,6 +2,8 @@
 
 Local-first dating for real people, clear intentions and safer conversations.
 
+Production target: **dating.samawi.co.uk**
+
 ## MVP principles
 
 - 18+ only
@@ -15,14 +17,13 @@ Local-first dating for real people, clear intentions and safer conversations.
 - No pay-per-message model
 - No donation/payment integration until the core platform is running reliably
 
-## Initial stack
+## Cloudflare-native stack
 
-- Python / FastAPI
-- PostgreSQL
-- Docker Compose
-
-## Development
+- Cloudflare Python Workers
+- FastAPI
+- Cloudflare D1
+- Cloudflare R2 for profile media (next step)
+- Cloudflare Turnstile for anti-bot protection (next step)
+- Durable Objects/WebSockets when realtime chat is introduced
 
 GitHub is the authoritative project state.
-
-Initial milestone: API + database foundation and health check.
