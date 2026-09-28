@@ -1,5 +1,9 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from datetime import date
+import json
+import urllib.parse
+from js import fetch
 from workers import asgi
 
 app = FastAPI(title="SaMaWi Dating", version="0.2.0")
@@ -40,11 +44,11 @@ footer{text-align:center;color:#777;padding:40px 20px}
 </main><footer>© 2026 SaMaWi Dating · dating.samawi.co.uk</footer>
 </body></html>"""
 
-REGISTER = """<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Registrieren · SaMaWi Dating</title>
+REGISTER = """<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Registrieren · SaMaWi Dating</title><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>body{font-family:system-ui;background:#101114;color:#fff;margin:0}.box{max-width:520px;margin:70px auto;padding:34px;background:#1b1d22;border:1px solid #30333b;border-radius:25px}h1{margin-top:0}label{display:block;margin:18px 0 7px;color:#c9cbd1}input{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font-size:16px;box-sizing:border-box}button{width:100%;margin-top:25px;padding:15px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}.note{color:#92959d;font-size:14px;line-height:1.5}a{color:#ff8293}</style></head>
 <body><div class="box"><a href="/">← SaMaWi Dating</a><h1>Konto erstellen</h1><p>Der erste Schritt zu deinem Profil.</p>
-<form><label>E-Mail-Adresse</label><input type="email" required autocomplete="email"><label>Geburtsdatum</label><input type="date" required><label>Passwort</label><input type="password" minlength="10" required autocomplete="new-password"><button type="button">Weiter</button></form>
-<p class="note">SaMaWi Dating ist ausschließlich für Erwachsene ab 18 Jahren. Die Registrierung wird im nächsten Entwicklungsschritt aktiviert.</p></div></body></html>"""
+<form method="post" action="/api/register"><label>E-Mail-Adresse</label><input name="email" type="email" required autocomplete="email"><label>Geburtsdatum</label><input name="birth_date" type="date" required><label>Passwort</label><input name="password" type="password" minlength="10" required autocomplete="new-password"><div style="margin-top:22px" class="cf-turnstile" data-sitekey="0x4AAAAAAFHp5Nw6yg0wNLfG" data-action="register" data-theme="dark"></div><button type="submit">Weiter</button></form>
+<p class="note">SaMaWi Dating ist ausschließlich für Erwachsene ab 18 Jahren. Dein Geburtsdatum wird serverseitig geprüft. Unter 18 ist keine Registrierung möglich.</p></div></body></html>"""
 
 @app.get("/", response_class=HTMLResponse)
 async def root():
@@ -59,3 +63,56 @@ async def health(request: Request):
     env = request.scope["env"]
     result = await env.DB.prepare("SELECT 1 AS ok").first()
     return {"status": "healthy" if result and result.ok == 1 else "degraded", "database": "D1"}
+
+
+def is_at_least_18(birth_date: date, today: date | None = None) -> bool:
+    today = today or date.today()
+    eighteenth_birthday = birth_date.replace(year=birth_date.year + 18)
+    return eighteenth_birthday <= today
+
+
+@app.post("/api/register")
+async def create_registration(request: Request):
+    form = await request.form()
+    email = str(form.get("email", "")).strip().lower()
+    birth_date_raw = str(form.get("birth_date", ""))
+    password = str(form.get("password", ""))
+    token = str(form.get("cf-turnstile-response", ""))
+
+    if not email or not birth_date_raw or len(password) < 10 or not token:
+        return JSONResponse({"ok": False, "error": "Bitte alle Felder korrekt ausfüllen."}, status_code=400)
+
+    try:
+        birth_date = date.fromisoformat(birth_date_raw)
+    except ValueError:
+        return JSONResponse({"ok": False, "error": "Ungültiges Geburtsdatum."}, status_code=400)
+
+    if birth_date > date.today() or not is_at_least_18(birth_date):
+        return JSONResponse({"ok": False, "error": "SaMaWi Dating ist ausschließlich für Personen ab 18 Jahren."}, status_code=403)
+
+    env = request.scope["env"]
+    secret = str(env.TURNSTILE_SECRET_KEY)
+    body = urllib.parse.urlencode({"secret": secret, "response": token})
+
+    verification_response = await fetch(
+        "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        method="POST",
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        body=body,
+    )
+    verification = json.loads(await verification_response.text())
+
+    if (
+        not verification.get("success")
+        or verification.get("hostname") != "dating.samawi.co.uk"
+        or verification.get("action") != "register"
+    ):
+        return JSONResponse({"ok": False, "error": "Sicherheitsprüfung fehlgeschlagen. Bitte erneut versuchen."}, status_code=400)
+
+    # Password storage/account creation intentionally follows in the next step.
+    # We do not persist plaintext passwords or partial accounts.
+    return JSONResponse({
+        "ok": True,
+        "message": "18+- und Bot-Prüfung erfolgreich. Kontoerstellung wird als Nächstes aktiviert.",
+        "email": email,
+    })
