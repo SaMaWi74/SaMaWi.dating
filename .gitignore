@@ -8,5 +8,7 @@ htmlcov/
 .idea/
 .vscode/
 .DS_Store
-data/
-logs/
+.wrangler/
+.dev.vars
+node_modules/
+uv.lock
