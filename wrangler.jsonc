@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "samawi-dating",
+  "main": "src/main.py",
+  "compatibility_date": "2026-09-28",
+  "compatibility_flags": ["python_workers"],
+  "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "dating.samawi.co.uk",
+      "custom_domain": true
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "samawi-dating",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ]
+}
