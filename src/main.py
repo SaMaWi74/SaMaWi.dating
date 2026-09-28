@@ -3,6 +3,10 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import date
 import json
 import urllib.parse
+import base64
+import hashlib
+import secrets
+import uuid
 from workers import fetch
 from workers import asgi
 
@@ -65,6 +69,26 @@ async def health(request: Request):
     return {"status": "healthy" if result and result.ok == 1 else "degraded", "database": "D1"}
 
 
+def hash_password(password: str) -> str:
+    # PBKDF2-HMAC-SHA256 with a unique 128-bit salt; format is self-describing
+    iterations = 600_000
+    salt = secrets.token_bytes(16)
+    derived = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+    return "pbkdf2_sha256$%d$%s$%s" % (
+        iterations,
+        base64.urlsafe_b64encode(salt).decode("ascii"),
+        base64.urlsafe_b64encode(derived).decode("ascii"),
+    )
+
+
+def registration_result(title: str, message: str, ok: bool = False, status_code: int = 200) -> HTMLResponse:
+    accent = "#67dda0" if ok else "#ff8293"
+    html = f"""<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{title} · SaMaWi Dating</title><style>body{{font-family:system-ui;background:#101114;color:#fff;margin:0}}.box{{max-width:520px;margin:70px auto;padding:34px;background:#1b1d22;border:1px solid #30333b;border-radius:25px}}h1{{color:{accent}}}p{{line-height:1.6;color:#c9cbd1}}a{{display:inline-block;margin-top:18px;color:#ff8293}}</style></head>
+<body><div class="box"><h1>{title}</h1><p>{message}</p><a href="/register">← Zur Registrierung</a></div></body></html>"""
+    return HTMLResponse(html, status_code=status_code)
+
+
 def is_at_least_18(birth_date: date, today: date | None = None) -> bool:
     today = today or date.today()
     eighteenth_birthday = birth_date.replace(year=birth_date.year + 18)
@@ -85,15 +109,15 @@ async def create_registration(request: Request):
     token = field("cf-turnstile-response")
 
     if not email or not birth_date_raw or len(password) < 10 or not token:
-        return JSONResponse({"ok": False, "error": "Bitte alle Felder korrekt ausfüllen."}, status_code=400)
+        return registration_result("Noch nicht ganz", "Bitte alle Felder korrekt ausfüllen.", status_code=400)
 
     try:
         birth_date = date.fromisoformat(birth_date_raw)
     except ValueError:
-        return JSONResponse({"ok": False, "error": "Ungültiges Geburtsdatum."}, status_code=400)
+        return registration_result("Ungültiges Geburtsdatum", "Bitte prüfe dein Geburtsdatum.", status_code=400)
 
     if birth_date > date.today() or not is_at_least_18(birth_date):
-        return JSONResponse({"ok": False, "error": "SaMaWi Dating ist ausschließlich für Personen ab 18 Jahren."}, status_code=403)
+        return registration_result("Registrierung nicht möglich", "SaMaWi Dating ist ausschließlich für Personen ab 18 Jahren.", status_code=403)
 
     env = request.scope["env"]
     secret = str(env.TURNSTILE_SECRET_KEY)
@@ -112,12 +136,27 @@ async def create_registration(request: Request):
         or verification.get("hostname") != "dating.samawi.co.uk"
         or verification.get("action") != "register"
     ):
-        return JSONResponse({"ok": False, "error": "Sicherheitsprüfung fehlgeschlagen. Bitte erneut versuchen."}, status_code=400)
+        return registration_result("Sicherheitsprüfung fehlgeschlagen", "Bitte gehe zurück und versuche es erneut.", status_code=400)
 
-    # Password storage/account creation intentionally follows in the next step.
-    # We do not persist plaintext passwords or partial accounts.
-    return JSONResponse({
-        "ok": True,
-        "message": "18+- und Bot-Prüfung erfolgreich. Kontoerstellung wird als Nächstes aktiviert.",
-        "email": email,
-    })
+    password_hash = hash_password(password)
+    user_id = str(uuid.uuid4())
+
+    try:
+        await env.DB.prepare(
+            "INSERT INTO users (id, email, birth_date, status, password_hash) VALUES (?, ?, ?, 'pending', ?)"
+        ).bind(user_id, email, birth_date.isoformat(), password_hash).run()
+    except Exception as exc:
+        # D1 enforces the unique email constraint. Do not expose database details.
+        if "UNIQUE" in str(exc).upper():
+            return registration_result(
+                "E-Mail bereits registriert",
+                "Für diese E-Mail-Adresse gibt es bereits ein Konto.",
+                status_code=409,
+            )
+        raise
+
+    return registration_result(
+        "Konto angelegt ✓",
+        "Dein Konto wurde sicher angelegt. Als Nächstes aktivieren wir die E-Mail-Bestätigung.",
+        ok=True,
+    )
