@@ -27,3 +27,8 @@ Production target: **dating.samawi.co.uk**
 - Durable Objects/WebSockets when realtime chat is introduced
 
 GitHub is the authoritative project state.
+
+
+## Cloudflare deployment
+
+Python dependencies such as FastAPI are bundled by **pywrangler**. Use `uv run pywrangler deploy` rather than plain `wrangler deploy`.
