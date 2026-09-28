@@ -32,3 +32,6 @@ GitHub is the authoritative project state.
 ## Cloudflare deployment
 
 Python dependencies such as FastAPI are bundled by **pywrangler**. Use `uv run pywrangler deploy` rather than plain `wrangler deploy`.
+
+
+Deployment trigger: Cloudflare Git integration configured for Python Workers.
