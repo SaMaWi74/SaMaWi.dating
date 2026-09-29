@@ -78,3 +78,10 @@ Next:
 3. Login/session handling.
 4. Profile creation and local discovery.
 5. Later add specialist age verification before opening the platform broadly to real users.
+
+
+## Latest milestone
+
+- Real account creation is working in production: Turnstile + server-side 18+ check + PBKDF2-SHA256 password hashing (100,000 iterations, random salt) + D1 insert and read-back verification.
+- New accounts are stored with `status = pending` until email verification is implemented.
+- Next task: email verification, then login/session handling.
