@@ -7,7 +7,7 @@ import base64
 import hashlib
 import secrets
 import uuid
-from js import crypto, TextEncoder, Uint8Array
+from js import crypto, TextEncoder, Uint8Array, Array
 from workers import fetch
 from workers import asgi
 
@@ -82,7 +82,7 @@ async def hash_password(password: str) -> str:
         encoder.encode(password),
         "PBKDF2",
         False,
-        ["deriveBits"],
+        Array.from_(["deriveBits"]),
     )
     derived_js = await crypto.subtle.deriveBits(
         {"name": "PBKDF2", "salt": salt_js, "iterations": iterations, "hash": "SHA-256"},
