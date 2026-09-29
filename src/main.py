@@ -131,7 +131,7 @@ async def profile_setup(request: Request):
       "it":("Il tuo profilo","Nome visualizzato","Su di me","Città / regione","Raggio di ricerca","Cosa cerchi?","Salva","La tua posizione esatta non viene mai mostrata pubblicamente.")
     }[lang]
     intentions={"de":["Beziehung","Dating","Freundschaft","Aktivitäten","Friends+","Abenteuer"],"en":["Relationship","Dating","Friendship","Activities","Friends+","Adventure"],"fr":["Relation","Rencontres","Amitié","Activités","Friends+","Aventure"],"it":["Relazione","Dating","Amicizia","Attività","Friends+","Avventura"]}[lang]
-    checks="".join(f'<label class="choice"><input type="checkbox" name="intentions" value="{i+1}"> {x}</label>' for i,x in enumerate(intentions))
+    checks="".join(f'<label class="choice"><input type="checkbox" name="intentions" value="{["relationship","dating","friendship","activities","friends_plus","adventure"][i]}"> {x}</label>' for i,x in enumerate(intentions))
     return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.note{{color:#92959d;font-size:14px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}"><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500"></textarea><label class="field">{labels[3]}</label><input type="text" name="location_label" maxlength="100" required><p class="note">{labels[7]}</p><label class="field">{labels[4]} (km)</label><input type="number" name="radius_km" min="1" max="500" value="50" required><label class="field">{labels[5]}</label><div class="choices">{checks}</div><button>{labels[6]}</button></form></section></main></body></html>''',lang)
 
 @app.post("/api/profile")
@@ -152,13 +152,11 @@ async def save_profile(request: Request):
     if not name or not location:
         return HTMLResponse("Missing profile data",status_code=400)
     env=request.scope["env"]; uid=str(session.user_id)
-    await env.DB.prepare("INSERT INTO profiles (user_id,display_name,bio,location_label,search_radius_km) VALUES (?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name,bio=excluded.bio,location_label=excluded.location_label,search_radius_km=excluded.search_radius_km").bind(uid,name,bio,location,radius).run()
+    await env.DB.prepare("INSERT INTO profiles (user_id,display_name,bio,locality) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name,bio=excluded.bio,locality=excluded.locality").bind(uid,name,bio,location).run()
     await env.DB.prepare("DELETE FROM profile_intentions WHERE user_id=?").bind(uid).run()
-    for raw in parsed.get("intentions",[]):
-        try:
-            iid=int(raw)
-            await env.DB.prepare("INSERT OR IGNORE INTO profile_intentions (user_id,intention_id) VALUES (?,?)").bind(uid,iid).run()
-        except: pass
+    for code in parsed.get("intentions",[]):
+        if code in ("relationship","dating","friendship","activities","friends_plus","adventure"):
+            await env.DB.prepare("INSERT OR IGNORE INTO profile_intentions (user_id,intention_code) VALUES (?,?)").bind(uid,code).run()
     return HTMLResponse("",status_code=303,headers={"Location":"/profile/setup?lang="+lang})
 
 @app.get("/", response_class=HTMLResponse)
