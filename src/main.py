@@ -7,6 +7,7 @@ import base64
 import hashlib
 import secrets
 import uuid
+from js import crypto, TextEncoder, Uint8Array
 from workers import fetch
 from workers import asgi
 
@@ -69,11 +70,27 @@ async def health(request: Request):
     return {"status": "healthy" if result and result.ok == 1 else "degraded", "database": "D1"}
 
 
-def hash_password(password: str) -> str:
-    # PBKDF2-HMAC-SHA256 with a unique 128-bit salt; format is self-describing
+async def hash_password(password: str) -> str:
+    # Cloudflare Python Workers run on Pyodide, where hashlib.pbkdf2_hmac is unavailable.
+    # Use the Workers Web Crypto implementation of PBKDF2 instead.
     iterations = 600_000
-    salt = secrets.token_bytes(16)
-    derived = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, iterations)
+    salt_js = Uint8Array.new(16)
+    crypto.getRandomValues(salt_js)
+    encoder = TextEncoder.new()
+    key_material = await crypto.subtle.importKey(
+        "raw",
+        encoder.encode(password),
+        "PBKDF2",
+        False,
+        ["deriveBits"],
+    )
+    derived_js = await crypto.subtle.deriveBits(
+        {"name": "PBKDF2", "salt": salt_js, "iterations": iterations, "hash": "SHA-256"},
+        key_material,
+        256,
+    )
+    salt = bytes(salt_js.to_py())
+    derived = bytes(Uint8Array.new(derived_js).to_py())
     return "pbkdf2_sha256$%d$%s$%s" % (
         iterations,
         base64.urlsafe_b64encode(salt).decode("ascii"),
@@ -139,7 +156,7 @@ async def create_registration(request: Request):
         return registration_result("Sicherheitsprüfung fehlgeschlagen", "Bitte gehe zurück und versuche es erneut.", status_code=400)
 
     print("REGISTER stage=turnstile_ok")
-    password_hash = hash_password(password)
+    password_hash = await hash_password(password)
     user_id = str(uuid.uuid4())
     print("REGISTER stage=hash_ok")
 
