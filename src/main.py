@@ -12,74 +12,43 @@ from workers import asgi
 app = FastAPI(title="SaMaWi Dating", version="0.2.0")
 Default = asgi.entrypoint(app)
 
-HOME = """<!doctype html>
-<html lang="de">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SaMaWi Dating</title>
-<style>
-*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,sans-serif;background:#101114;color:#f6f6f6}
-nav{height:72px;display:flex;align-items:center;justify-content:space-between;max-width:1120px;margin:auto;padding:0 24px}
-.brand{font-size:24px;font-weight:800}.brand span{color:#ff5c72}
-nav a{color:#fff;text-decoration:none;margin-left:22px}.cta{background:#ff5c72;padding:11px 18px;border-radius:999px;font-weight:700}
-main{max-width:1120px;margin:auto;padding:90px 24px 70px;display:grid;grid-template-columns:1.15fr .85fr;gap:70px;align-items:center}
-h1{font-size:clamp(46px,7vw,78px);line-height:.98;margin:0 0 25px}h1 em{font-style:normal;color:#ff5c72}
-.lead{font-size:20px;line-height:1.6;color:#c9cbd1;max-width:650px}.actions{margin-top:34px;display:flex;gap:14px;flex-wrap:wrap}
-.button{display:inline-block;padding:15px 24px;border-radius:999px;text-decoration:none;font-weight:800}.primary{background:#ff5c72;color:white}.secondary{border:1px solid #4a4d55;color:white}
-.card{background:#1b1d22;border:1px solid #30333b;border-radius:28px;padding:32px;box-shadow:0 30px 80px #0008}
-.card h2{margin-top:0;font-size:28px}.row{padding:15px 0;border-bottom:1px solid #30333b}.row:last-child{border:0}.check{color:#67dda0;font-weight:800;margin-right:10px}
-footer{text-align:center;color:#777;padding:40px 20px}
-@media(max-width:800px){main{grid-template-columns:1fr;padding-top:45px}.card{margin-top:10px}}
-</style>
-</head>
-<body>
-<nav><div class="brand">SaMaWi<span>.</span>dating</div><div><a href="/login">Anmelden</a><a class="cta" href="/register">Kostenlos registrieren</a></div></nav>
-<main>
-<section><h1>Echte Menschen.<br><em>Echte Nähe.</em></h1>
-<p class="lead">Dating ohne Karteileichen, versteckte Kosten und künstliche Chats. Finde Menschen in deiner Nähe, die klar sagen, was sie suchen.</p>
-<div class="actions"><a class="button primary" href="/register">Jetzt kostenlos starten</a><a class="button secondary" href="#why">Warum SaMaWi?</a></div></section>
-<section class="card" id="why"><h2>Dating, wie es sein sollte.</h2>
-<div class="row"><span class="check">✓</span>Lokale Suche statt Bezirk-Chaos</div>
-<div class="row"><span class="check">✓</span>Klare Absichten und echte Aktivität</div>
-<div class="row"><span class="check">✓</span>Nachrichten ohne Credits pro Nachricht</div>
-<div class="row"><span class="check">✓</span>Anti-Scam-Schutz von Anfang an</div>
-<div class="row"><span class="check">✓</span>18+ und Privatsphäre by design</div></section>
-</main><footer>© 2026 SaMaWi Dating · dating.samawi.co.uk</footer>
-</body></html>"""
-
-REGISTER = """<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Registrieren · SaMaWi Dating</title><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
-<style>body{font-family:system-ui;background:#101114;color:#fff;margin:0}.box{max-width:520px;margin:70px auto;padding:34px;background:#1b1d22;border:1px solid #30333b;border-radius:25px}h1{margin-top:0}label{display:block;margin:18px 0 7px;color:#c9cbd1}input{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font-size:16px;box-sizing:border-box}button{width:100%;margin-top:25px;padding:15px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}.note{color:#92959d;font-size:14px;line-height:1.5}a{color:#ff8293}</style></head>
-<body><div class="box"><a href="/">← SaMaWi Dating</a><h1>Konto erstellen</h1><p>Der erste Schritt zu deinem Profil.</p>
-<form method="post" action="/api/register"><label>E-Mail-Adresse</label><input name="email" type="email" required autocomplete="email"><label>Geburtsdatum</label><input name="birth_date" type="date" required><label>Passwort</label><input name="password" type="password" minlength="10" required autocomplete="new-password"><div style="margin-top:22px" class="cf-turnstile" data-sitekey="0x4AAAAAAFHp5Nw6yg0wNLfG" data-action="register" data-theme="dark"></div><button type="submit">Weiter</button></form>
-<p class="note">SaMaWi Dating ist ausschließlich für Erwachsene ab 18 Jahren. Dein Geburtsdatum wird serverseitig geprüft. Unter 18 ist keine Registrierung möglich.</p></div></body></html>"""
-
-
-
 LANGS = {
-    "de": {"login":"Anmelden","register":"Kostenlos registrieren","email":"E-Mail-Adresse","password":"Passwort","submit":"Anmelden","title":"Willkommen zurück","bad":"E-Mail oder Passwort ist nicht korrekt.","inactive":"Bitte bestätige zuerst deine E-Mail-Adresse."},
-    "en": {"login":"Sign in","register":"Register free","email":"Email address","password":"Password","submit":"Sign in","title":"Welcome back","bad":"Email or password is incorrect.","inactive":"Please confirm your email address first."},
-    "fr": {"login":"Connexion","register":"Inscription gratuite","email":"Adresse e-mail","password":"Mot de passe","submit":"Se connecter","title":"Bon retour","bad":"L’e-mail ou le mot de passe est incorrect.","inactive":"Veuillez d’abord confirmer votre adresse e-mail."},
-    "it": {"login":"Accedi","register":"Registrati gratis","email":"Indirizzo e-mail","password":"Password","submit":"Accedi","title":"Bentornato","bad":"E-mail o password non corretti.","inactive":"Conferma prima il tuo indirizzo e-mail."},
+    "de": {"login":"Anmelden","register":"Kostenlos registrieren","email":"E-Mail-Adresse","password":"Passwort","submit":"Anmelden","title":"Willkommen zurück","bad":"E-Mail oder Passwort ist nicht korrekt.","inactive":"Bitte bestätige zuerst deine E-Mail-Adresse.","birth":"Geburtsdatum","create":"Konto erstellen","next":"Weiter","home_title":"Echte Menschen.","home_near":"Echte Nähe.","home_lead":"Dating ohne Karteileichen, versteckte Kosten und künstliche Chats. Finde Menschen in deiner Nähe, die klar sagen, was sie suchen.","start":"Jetzt kostenlos starten","why":"Warum SaMaWi?","card":"Dating, wie es sein sollte.","rows":["Lokale Suche statt Bezirk-Chaos","Klare Absichten und echte Aktivität","Nachrichten ohne Credits pro Nachricht","Anti-Scam-Schutz von Anfang an","18+ und Privatsphäre by design"],"reg_intro":"Der erste Schritt zu deinem Profil.","adult":"SaMaWi Dating ist ausschließlich für Erwachsene ab 18 Jahren. Dein Geburtsdatum wird serverseitig geprüft."},
+    "en": {"login":"Sign in","register":"Register free","email":"Email address","password":"Password","submit":"Sign in","title":"Welcome back","bad":"Email or password is incorrect.","inactive":"Please confirm your email address first.","birth":"Date of birth","create":"Create account","next":"Continue","home_title":"Real people.","home_near":"Real closeness.","home_lead":"Dating without inactive profiles, hidden costs or artificial chats. Find people near you who clearly say what they are looking for.","start":"Start for free","why":"Why SaMaWi?","card":"Dating, as it should be.","rows":["Local search instead of district chaos","Clear intentions and real activity","Messages without credits per message","Anti-scam protection from the start","18+ and privacy by design"],"reg_intro":"The first step to your profile.","adult":"SaMaWi Dating is exclusively for adults aged 18+. Your date of birth is checked server-side."},
+    "fr": {"login":"Connexion","register":"Inscription gratuite","email":"Adresse e-mail","password":"Mot de passe","submit":"Se connecter","title":"Bon retour","bad":"L’e-mail ou le mot de passe est incorrect.","inactive":"Veuillez d’abord confirmer votre adresse e-mail.","birth":"Date de naissance","create":"Créer un compte","next":"Continuer","home_title":"De vraies personnes.","home_near":"Une vraie proximité.","home_lead":"Des rencontres sans profils fantômes, coûts cachés ni chats artificiels. Trouve des personnes près de chez toi qui disent clairement ce qu’elles recherchent.","start":"Commencer gratuitement","why":"Pourquoi SaMaWi ?","card":"Les rencontres comme elles devraient être.","rows":["Recherche locale plutôt que chaos administratif","Intentions claires et activité réelle","Messages sans crédits par message","Protection anti-arnaque dès le départ","18+ et confidentialité dès la conception"],"reg_intro":"La première étape vers ton profil.","adult":"SaMaWi Dating est exclusivement réservé aux adultes de 18 ans et plus. Ta date de naissance est vérifiée côté serveur."},
+    "it": {"login":"Accedi","register":"Registrati gratis","email":"Indirizzo e-mail","password":"Password","submit":"Accedi","title":"Bentornato","bad":"E-mail o password non corretti.","inactive":"Conferma prima il tuo indirizzo e-mail.","birth":"Data di nascita","create":"Crea account","next":"Continua","home_title":"Persone vere.","home_near":"Vera vicinanza.","home_lead":"Dating senza profili fantasma, costi nascosti o chat artificiali. Trova persone vicino a te che dicono chiaramente cosa cercano.","start":"Inizia gratis","why":"Perché SaMaWi?","card":"Dating, come dovrebbe essere.","rows":["Ricerca locale invece del caos dei distretti","Intenzioni chiare e attività reale","Messaggi senza crediti per messaggio","Protezione anti-truffa fin dall’inizio","18+ e privacy by design"],"reg_intro":"Il primo passo verso il tuo profilo.","adult":"SaMaWi Dating è riservato esclusivamente agli adulti dai 18 anni in su. La data di nascita viene verificata sul server."},
 }
+
+COMMON_CSS = """*{box-sizing:border-box}body{margin:0;padding-top:72px;font-family:system-ui,-apple-system,sans-serif;background:#101114;color:#f6f6f6}.top{position:fixed;z-index:100;top:0;left:0;right:0;height:72px;background:#101114ef;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1120px)/2));border-bottom:1px solid #17191e}.brand{font-size:24px;font-weight:800;color:#fff;text-decoration:none}.brand span{color:#ff5c72}.navright{display:flex;gap:14px;align-items:center}.top a{color:#fff;text-decoration:none}.top .cta{background:#ff5c72;padding:10px 16px;border-radius:999px;font-weight:700}.lang{font-size:12px;color:#aaa!important}.lang.active{color:#fff!important;font-weight:800}@media(max-width:700px){.navright{gap:9px}.top .cta{padding:9px 12px}.brand{font-size:20px}}"""
 
 def lang_for(request: Request) -> str:
     q = request.query_params.get("lang", "").lower()
-    if q in LANGS:
-        return q
+    if q in LANGS: return q
     cookie = request.cookies.get("lang", "").lower()
-    if cookie in LANGS:
-        return cookie
+    if cookie in LANGS: return cookie
     accept = request.headers.get("accept-language", "").lower()
     for code in ("de","fr","it","en"):
-        if code in accept:
-            return code
+        if code in accept: return code
     return "en"
 
 def header_html(lang: str, logged_in: bool = False, path: str = "/") -> str:
-    t = LANGS[lang]
+    t=LANGS[lang]
     auth = '<a href="/logout">Logout</a>' if logged_in else f'<a href="/login?lang={lang}">{t["login"]}</a><a class="cta" href="/register?lang={lang}">{t["register"]}</a>'
-    langs = " ".join(f'<a class="lang" href="{path}?lang={x}">{x.upper()}</a>' for x in ("de","en","fr","it"))
+    langs=" ".join(f'<a class="lang{" active" if x==lang else ""}" href="{path}?lang={x}">{x.upper()}</a>' for x in ("de","en","fr","it"))
     return f'<nav class="top"><a class="brand" href="/?lang={lang}">SaMaWi<span>.</span>dating</a><div class="navright">{langs}{auth}</div></nav>'
+
+def page_response(html: str, lang: str, status_code: int = 200) -> HTMLResponse:
+    r=HTMLResponse(html,status_code=status_code)
+    r.set_cookie("lang",lang,max_age=31536000,secure=True,samesite="lax",path="/")
+    return r
+
+def home_page(lang: str) -> str:
+    t=LANGS[lang]; rows="".join(f'<div class="row"><span class="check">✓</span>{x}</div>' for x in t["rows"])
+    return f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SaMaWi Dating</title><style>{COMMON_CSS}main{{max-width:1120px;margin:auto;padding:90px 24px 70px;display:grid;grid-template-columns:1.15fr .85fr;gap:70px;align-items:center}}h1{{font-size:clamp(46px,7vw,78px);line-height:.98;margin:0 0 25px}}h1 em{{font-style:normal;color:#ff5c72}}.lead{{font-size:20px;line-height:1.6;color:#c9cbd1;max-width:650px}}.actions{{margin-top:34px;display:flex;gap:14px;flex-wrap:wrap}}.button{{display:inline-block;padding:15px 24px;border-radius:999px;text-decoration:none;font-weight:800}}.primary{{background:#ff5c72;color:white}}.secondary{{border:1px solid #4a4d55;color:white}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:28px;padding:32px;box-shadow:0 30px 80px #0008}}.card h2{{margin-top:0;font-size:28px}}.row{{padding:15px 0;border-bottom:1px solid #30333b}}.row:last-child{{border:0}}.check{{color:#67dda0;font-weight:800;margin-right:10px}}footer{{text-align:center;color:#777;padding:40px 20px}}@media(max-width:800px){{main{{grid-template-columns:1fr;padding-top:45px}}}}</style></head><body>{header_html(lang,path="/")}<main><section><h1>{t["home_title"]}<br><em>{t["home_near"]}</em></h1><p class="lead">{t["home_lead"]}</p><div class="actions"><a class="button primary" href="/register?lang={lang}">{t["start"]}</a><a class="button secondary" href="#why">{t["why"]}</a></div></section><section class="card" id="why"><h2>{t["card"]}</h2>{rows}</section></main><footer>© 2026 SaMaWi Dating · dating.samawi.co.uk</footer></body></html>'''
+
+def register_page(lang: str) -> str:
+    t=LANGS[lang]
+    return f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{t["create"]} · SaMaWi Dating</title><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script><style>{COMMON_CSS}.box{{max-width:520px;margin:70px auto;padding:34px;background:#1b1d22;border:1px solid #30333b;border-radius:25px}}label{{display:block;margin:18px 0 7px;color:#c9cbd1}}input{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font-size:16px}}button{{width:100%;margin-top:25px;padding:15px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.note{{color:#92959d;font-size:14px;line-height:1.5}}</style></head><body>{header_html(lang,path="/register")}<main class="box"><h1>{t["create"]}</h1><p>{t["reg_intro"]}</p><form method="post" action="/api/register?lang={lang}"><label>{t["email"]}</label><input name="email" type="email" required autocomplete="email"><label>{t["birth"]}</label><input name="birth_date" type="date" required><label>{t["password"]}</label><input name="password" type="password" minlength="10" required autocomplete="new-password"><div style="margin-top:22px" class="cf-turnstile" data-sitekey="0x4AAAAAAFHp5Nw6yg0wNLfG" data-action="register" data-theme="dark"></div><button>{t["next"]}</button></form><p class="note">{t["adult"]}</p></main></body></html>'''
 
 async def verify_password(password: str, encoded: str) -> bool:
     try:
@@ -104,7 +73,7 @@ def login_page(lang: str, error: str = "") -> str:
     t=LANGS[lang]
     err=f'<p class="err">{error}</p>' if error else ""
     return f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{t["login"]} · SaMaWi Dating</title>
-<style>*{{box-sizing:border-box}}body{{margin:0;padding-top:72px;font-family:system-ui;background:#101114;color:#fff}}.top{{position:fixed;z-index:10;top:0;left:0;right:0;height:72px;background:#101114eF;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1120px)/2))}}.brand{{font-size:24px;font-weight:800;color:#fff;text-decoration:none}}.brand span{{color:#ff5c72}}.navright{{display:flex;gap:14px;align-items:center}}.top a{{color:#fff;text-decoration:none}}.top .cta{{background:#ff5c72;padding:10px 16px;border-radius:999px;font-weight:700}}.lang{{font-size:12px;color:#aaa!important}}.box{{max-width:520px;margin:70px auto;padding:34px;background:#1b1d22;border:1px solid #30333b;border-radius:25px}}label{{display:block;margin:18px 0 7px;color:#c9cbd1}}input{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font-size:16px}}button{{width:100%;margin-top:25px;padding:15px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.err{{color:#ff8293}}@media(max-width:700px){{.lang{{display:none}}}}</style></head><body>{header_html(lang, path='/login')}<main class="box"><h1>{t["title"]}</h1>{err}<form method="post" action="/api/login?lang={lang}"><label>{t["email"]}</label><input name="email" type="email" required autocomplete="email"><label>{t["password"]}</label><input name="password" type="password" required autocomplete="current-password"><button>{t["submit"]}</button></form></main></body></html>'''
+<style>{COMMON_CSS}.box{{max-width:520px;margin:70px auto;padding:34px;background:#1b1d22;border:1px solid #30333b;border-radius:25px}}label{{display:block;margin:18px 0 7px;color:#c9cbd1}}input{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font-size:16px}}button{{width:100%;margin-top:25px;padding:15px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.err{{color:#ff8293}}@media(max-width:700px){{.lang{{display:none}}}}</style></head><body>{header_html(lang, path='/login')}<main class="box"><h1>{t["title"]}</h1>{err}<form method="post" action="/api/login?lang={lang}"><label>{t["email"]}</label><input name="email" type="email" required autocomplete="email"><label>{t["password"]}</label><input name="password" type="password" required autocomplete="current-password"><button>{t["submit"]}</button></form></main></body></html>'''
 
 @app.get("/login", response_class=HTMLResponse)
 async def login(request: Request):
@@ -156,12 +125,14 @@ async def profile_setup(request: Request):
     return HTMLResponse(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Profil · SaMaWi Dating</title><style>body{{margin:0;padding-top:72px;font-family:system-ui;background:#101114;color:#fff}}.top{{position:fixed;top:0;left:0;right:0;height:72px;background:#101114;display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1120px)/2))}}.brand{{font-size:24px;font-weight:800;color:#fff;text-decoration:none}}.brand span{{color:#ff5c72}}.navright{{display:flex;gap:14px;align-items:center}}.top a{{color:#fff;text-decoration:none}}.lang{{font-size:12px;color:#aaa!important}}main{{max-width:760px;margin:70px auto;padding:34px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main><h1>{profile_title}</h1><p>{profile_text}</p></main></body></html>''')
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
-    return HOME
+async def root(request: Request):
+    lang=lang_for(request)
+    return page_response(home_page(lang),lang)
 
 @app.get("/register", response_class=HTMLResponse)
-async def register():
-    return REGISTER
+async def register(request: Request):
+    lang=lang_for(request)
+    return page_response(register_page(lang),lang)
 
 @app.get("/health")
 async def health(request: Request):
