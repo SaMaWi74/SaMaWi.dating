@@ -73,7 +73,7 @@ async def health(request: Request):
 async def hash_password(password: str) -> str:
     # Cloudflare Python Workers run on Pyodide, where hashlib.pbkdf2_hmac is unavailable.
     # Use the Workers Web Crypto implementation of PBKDF2 instead.
-    iterations = 600_000
+    iterations = 100_000
     salt_js = Uint8Array.new(16)
     crypto.getRandomValues(salt_js)
     encoder = TextEncoder.new()
