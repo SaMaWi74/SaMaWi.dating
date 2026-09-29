@@ -94,3 +94,60 @@ Next:
 - Login implementation added for active accounts with PBKDF2 password verification and 30-day HttpOnly/Secure/SameSite=Lax session cookie.
 - Login UI supports DE/EN/FR/IT and introduces the shared fixed navigation header. Profile setup is protected by the session.
 - Migration `migrations/0004_sessions.sql` must be applied to production D1 before login testing.
+
+
+## Research & documentation log — 2026-09-29
+
+SaMaWi Dating is being developed as both a dating product and a documented privacy/anti-scam case study. Preserve design decisions, observations, test cases, false positives, failures and countermeasures.
+
+### Core communication principle
+
+**Du musst SaMaWi Dating nicht verlassen, um jemanden kennenzulernen.**
+
+SaMaWi will provide its own person-to-person messaging. Users should not have to disclose private email addresses, phone numbers or third-party messenger identities merely to begin a conversation. Legitimate established users may eventually exchange contact information; the goal is to stop coercive or suspicious early migration, not normal relationships.
+
+### Observed off-platform migration patterns
+
+Real-world observations motivating the design (personal identifiers deliberately omitted):
+
+1. A first-contact message used generic relationship language, supplied little/no verifiable profile information, explained this with prior bad experiences, and immediately requested an email exchange.
+2. A separate first-contact message immediately supplied three off-platform channels at once: Telegram, Zangi and email, asking the recipient to continue there.
+3. A useful behavioral test is to decline migration and ask to continue on-platform. Natural conversation differs from repeating the migration request or abandoning the conversation.
+
+These observations are examples, not proof that an individual sender is fraudulent. SaMaWi should classify behavior and risk signals rather than label people from one message.
+
+### Planned anti-scam signals
+
+- very new account
+- generic/repeated first-contact text
+- rapid or bulk messaging
+- Telegram, Zangi, WhatsApp, Signal or similar identifiers
+- email addresses and phone numbers
+- external URLs
+- obfuscated contact data intended to evade filters
+- immediate/repeated requests to leave SaMaWi
+- several off-platform channels in one early message
+- repeated migration pressure after the recipient declines
+
+Signals should accumulate into a risk score. A single keyword must not automatically establish fraud. Document thresholds, moderation outcomes and false-positive tests.
+
+### Research methodology
+
+For every anti-scam rule/model change retain: hypothesis; anonymized example/pattern; detected features; expected response; actual result; false positives/negatives; revision; date; relevant commit.
+
+Do not commit personal email addresses, telephone numbers, messenger handles, private messages with identifying details, credentials or secrets to this public repository. Research examples must be anonymized/minimized.
+
+### Possible public/CCC case-study direction
+
+Future technical question: **How can a dating platform make common off-platform scam migration harder without blocking normal human conversation?**
+
+A credible case study should show data and engineering rather than marketing: observed patterns, threat model, detection design, privacy constraints, experiments, failure cases, false-positive rates and implementation evolution.
+
+### Current product milestone
+
+- Email verification is live and tested.
+- migrations/0004_sessions.sql has been applied.
+- Login, password verification, D1 sessions, secure cookie and protected profile route are tested in production.
+- Shared fixed header and DE/EN/FR/IT language handling are being expanded.
+- Profile setup implementation is in progress.
+- Language selector is a stable right-aligned dropdown; DE/EN/FR/IT active, more planned.
