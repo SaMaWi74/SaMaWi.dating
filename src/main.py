@@ -1,10 +1,8 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from datetime import date
-import json
+from fastapi.responses import HTMLResponse
+from datetime import date, datetime, timedelta, timezone
 import urllib.parse
 import base64
-import hashlib
 import secrets
 import uuid
 from js import crypto, TextEncoder, Uint8Array, Array
@@ -108,8 +106,75 @@ def registration_result(title: str, message: str, ok: bool = False, status_code:
 
 def is_at_least_18(birth_date: date, today: date | None = None) -> bool:
     today = today or date.today()
-    eighteenth_birthday = birth_date.replace(year=birth_date.year + 18)
-    return eighteenth_birthday <= today
+    years = today.year - birth_date.year
+    if (today.month, today.day) < (birth_date.month, birth_date.day):
+        years -= 1
+    return years >= 18
+
+
+async def send_verification_email(env, email: str, token: str) -> None:
+    verify_url = "https://dating.samawi.co.uk/verify-email?token=" + urllib.parse.quote(token)
+    payload = {
+        "from": "SaMaWi Dating <noreply@dating.samawi.co.uk>",
+        "to": [email],
+        "subject": "Bestätige deine E-Mail-Adresse · SaMaWi Dating",
+        "html": (
+            "<h2>Willkommen bei SaMaWi Dating</h2>"
+            "<p>Bitte bestätige deine E-Mail-Adresse, um dein Konto zu aktivieren.</p>"
+            f'<p><a href="{verify_url}">E-Mail-Adresse bestätigen</a></p>'
+            "<p>Der Link ist 24 Stunden gültig. Wenn du dich nicht registriert hast, kannst du diese Mail ignorieren.</p>"
+        ),
+    }
+    response = await fetch(
+        "https://api.resend.com/emails",
+        method="POST",
+        headers={
+            "Authorization": "Bearer " + str(env.RESEND_API_KEY),
+            "Content-Type": "application/json",
+        },
+        body=__import__("json").dumps(payload),
+    )
+    if not response.ok:
+        detail = await response.text()
+        raise RuntimeError("Resend email failed: HTTP %s %s" % (response.status, detail[:200]))
+
+
+@app.get("/verify-email", response_class=HTMLResponse)
+async def verify_email(request: Request):
+    token = request.query_params.get("token", "")
+    if not token:
+        return registration_result("Ungültiger Link", "Der Bestätigungslink ist unvollständig.", status_code=400)
+
+    env = request.scope["env"]
+    row = await env.DB.prepare(
+        """SELECT evt.user_id
+           FROM email_verification_tokens evt
+           JOIN users u ON u.id = evt.user_id
+           WHERE evt.token = ? AND evt.used_at IS NULL AND evt.expires_at > datetime('now')
+             AND u.email_verified_at IS NULL
+           LIMIT 1"""
+    ).bind(token).first()
+
+    if not row:
+        return registration_result(
+            "Link ungültig oder abgelaufen",
+            "Dieser Bestätigungslink wurde bereits verwendet oder ist nicht mehr gültig.",
+            status_code=400,
+        )
+
+    user_id = str(row.user_id)
+    await env.DB.prepare(
+        "UPDATE users SET email_verified_at = datetime('now'), status = 'active' WHERE id = ?"
+    ).bind(user_id).run()
+    await env.DB.prepare(
+        "UPDATE email_verification_tokens SET used_at = datetime('now') WHERE token = ?"
+    ).bind(token).run()
+    print("VERIFY_EMAIL stage=complete user_id=" + user_id)
+    return registration_result(
+        "E-Mail bestätigt ✓",
+        "Dein Konto ist jetzt aktiviert. Als Nächstes richten wir dein Profil ein.",
+        ok=True,
+    )
 
 
 @app.post("/api/register")
@@ -175,6 +240,15 @@ async def create_registration(request: Request):
                 "Das Konto konnte nicht bestätigt in der Datenbank gespeichert werden.",
                 status_code=500,
             )
+
+        verification_token = secrets.token_urlsafe(32)
+        expires_at = (datetime.now(timezone.utc) + timedelta(hours=24)).strftime("%Y-%m-%d %H:%M:%S")
+        await env.DB.prepare(
+            "INSERT INTO email_verification_tokens (token, user_id, expires_at) VALUES (?, ?, ?)"
+        ).bind(verification_token, user_id, expires_at).run()
+        print("REGISTER stage=verification_token_saved")
+        await send_verification_email(env, email, verification_token)
+        print("REGISTER stage=verification_email_sent")
     except Exception as exc:
         # D1 enforces the unique email constraint. Do not expose database details.
         print("REGISTER stage=insert_error type=" + type(exc).__name__)
@@ -188,7 +262,7 @@ async def create_registration(request: Request):
 
     print("REGISTER stage=complete")
     return registration_result(
-        "Konto angelegt ✓",
-        "Dein Konto wurde sicher angelegt. Als Nächstes aktivieren wir die E-Mail-Bestätigung.",
+        "Fast geschafft ✓",
+        "Dein Konto wurde angelegt. Wir haben dir eine Bestätigungsmail geschickt. Bitte öffne den Link in der Mail innerhalb von 24 Stunden.",
         ok=True,
     )
