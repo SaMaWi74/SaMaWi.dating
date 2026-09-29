@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from datetime import date, datetime, timedelta, timezone
 import urllib.parse
 import base64
@@ -128,7 +128,7 @@ async def do_login(request: Request):
     token=secrets.token_urlsafe(32)
     expires=(datetime.now(timezone.utc)+timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
     await env.DB.prepare("INSERT INTO sessions (token,user_id,expires_at) VALUES (?, ?, ?)").bind(token,str(user.id),expires).run()
-    response=RedirectResponse("/profile/setup?lang="+lang,status_code=303)
+    response=HTMLResponse("",status_code=303,headers={"Location":"/profile/setup?lang="+lang})
     response.set_cookie("samawi_session",token,max_age=2592000,httponly=True,secure=True,samesite="lax",path="/")
     response.set_cookie("lang",lang,max_age=31536000,secure=True,samesite="lax",path="/")
     return response
@@ -138,7 +138,7 @@ async def logout(request: Request):
     token=request.cookies.get("samawi_session","")
     if token:
         await request.scope["env"].DB.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run()
-    response=RedirectResponse("/",status_code=303)
+    response=HTMLResponse("",status_code=303,headers={"Location":"/"})
     response.delete_cookie("samawi_session",path="/")
     return response
 
@@ -150,7 +150,7 @@ async def profile_setup(request: Request):
     if token:
         row=await request.scope["env"].DB.prepare("SELECT user_id FROM sessions WHERE token=? AND expires_at > datetime('now') LIMIT 1").bind(token).first()
     if not row:
-        return RedirectResponse("/login?lang="+lang,status_code=303)
+        return HTMLResponse("",status_code=303,headers={"Location":"/login?lang="+lang})
     return HTMLResponse(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Profil · SaMaWi Dating</title><style>body{{margin:0;padding-top:72px;font-family:system-ui;background:#101114;color:#fff}}.top{{position:fixed;top:0;left:0;right:0;height:72px;background:#101114;display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1120px)/2))}}.brand{{font-size:24px;font-weight:800;color:#fff;text-decoration:none}}.brand span{{color:#ff5c72}}.navright{{display:flex;gap:14px;align-items:center}}.top a{{color:#fff;text-decoration:none}}.lang{{font-size:12px;color:#aaa!important}}main{{max-width:760px;margin:70px auto;padding:34px}} </style></head><body>{header_html(lang,True)}<main><h1>Profil einrichten</h1><p>Login funktioniert. Als Nächstes bauen wir hier dein Dating-Profil.</p></main></body></html>''')
 
 @app.get("/", response_class=HTMLResponse)
