@@ -85,3 +85,12 @@ Next:
 - Real account creation is working in production: Turnstile + server-side 18+ check + PBKDF2-SHA256 password hashing (100,000 iterations, random salt) + D1 insert and read-back verification.
 - New accounts are stored with `status = pending` until email verification is implemented.
 - Next task: email verification, then login/session handling.
+
+
+## Production milestone — 2026-09-29
+
+- Registration → Resend verification email → `/verify-email` → account activation has been tested successfully in production.
+- SPF and DKIM pass at Gmail; DMARC monitoring record `v=DMARC1; p=none;` is configured for `dating.samawi.co.uk`.
+- Login implementation added for active accounts with PBKDF2 password verification and 30-day HttpOnly/Secure/SameSite=Lax session cookie.
+- Login UI supports DE/EN/FR/IT and introduces the shared fixed navigation header. Profile setup is protected by the session.
+- Migration `migrations/0004_sessions.sql` must be applied to production D1 before login testing.
