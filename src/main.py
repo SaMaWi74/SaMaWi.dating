@@ -53,6 +53,106 @@ REGISTER = """<!doctype html><html lang="de"><head><meta charset="utf-8"><meta n
 <form method="post" action="/api/register"><label>E-Mail-Adresse</label><input name="email" type="email" required autocomplete="email"><label>Geburtsdatum</label><input name="birth_date" type="date" required><label>Passwort</label><input name="password" type="password" minlength="10" required autocomplete="new-password"><div style="margin-top:22px" class="cf-turnstile" data-sitekey="0x4AAAAAAFHp5Nw6yg0wNLfG" data-action="register" data-theme="dark"></div><button type="submit">Weiter</button></form>
 <p class="note">SaMaWi Dating ist ausschließlich für Erwachsene ab 18 Jahren. Dein Geburtsdatum wird serverseitig geprüft. Unter 18 ist keine Registrierung möglich.</p></div></body></html>"""
 
+
+
+LANGS = {
+    "de": {"login":"Anmelden","register":"Kostenlos registrieren","email":"E-Mail-Adresse","password":"Passwort","submit":"Anmelden","title":"Willkommen zurück","bad":"E-Mail oder Passwort ist nicht korrekt.","inactive":"Bitte bestätige zuerst deine E-Mail-Adresse."},
+    "en": {"login":"Sign in","register":"Register free","email":"Email address","password":"Password","submit":"Sign in","title":"Welcome back","bad":"Email or password is incorrect.","inactive":"Please confirm your email address first."},
+    "fr": {"login":"Connexion","register":"Inscription gratuite","email":"Adresse e-mail","password":"Mot de passe","submit":"Se connecter","title":"Bon retour","bad":"L’e-mail ou le mot de passe est incorrect.","inactive":"Veuillez d’abord confirmer votre adresse e-mail."},
+    "it": {"login":"Accedi","register":"Registrati gratis","email":"Indirizzo e-mail","password":"Password","submit":"Accedi","title":"Bentornato","bad":"E-mail o password non corretti.","inactive":"Conferma prima il tuo indirizzo e-mail."},
+}
+
+def lang_for(request: Request) -> str:
+    q = request.query_params.get("lang", "").lower()
+    if q in LANGS:
+        return q
+    cookie = request.cookies.get("lang", "").lower()
+    if cookie in LANGS:
+        return cookie
+    accept = request.headers.get("accept-language", "").lower()
+    for code in ("de","fr","it","en"):
+        if code in accept:
+            return code
+    return "en"
+
+def header_html(lang: str, logged_in: bool = False) -> str:
+    t = LANGS[lang]
+    auth = '<a href="/logout">Logout</a>' if logged_in else f'<a href="/login?lang={lang}">{t["login"]}</a><a class="cta" href="/register?lang={lang}">{t["register"]}</a>'
+    langs = " ".join(f'<a class="lang" href="?lang={x}">{x.upper()}</a>' for x in ("de","en","fr","it"))
+    return f'<nav class="top"><a class="brand" href="/?lang={lang}">SaMaWi<span>.</span>dating</a><div class="navright">{langs}{auth}</div></nav>'
+
+async def verify_password(password: str, encoded: str) -> bool:
+    try:
+        scheme, iterations_raw, salt_b64, expected_b64 = encoded.split("$", 3)
+        if scheme != "pbkdf2_sha256":
+            return False
+        iterations = int(iterations_raw)
+        salt = base64.urlsafe_b64decode(salt_b64.encode("ascii"))
+        expected = base64.urlsafe_b64decode(expected_b64.encode("ascii"))
+        encoder = TextEncoder.new()
+        key_material = await crypto.subtle.importKey("raw", encoder.encode(password), "PBKDF2", False, Array.from_(["deriveBits"]))
+        salt_js = Uint8Array.new(len(salt))
+        for i, b in enumerate(salt):
+            salt_js[i] = b
+        derived_js = await crypto.subtle.deriveBits({"name":"PBKDF2","salt":salt_js,"iterations":iterations,"hash":"SHA-256"}, key_material, len(expected) * 8)
+        actual = bytes(Uint8Array.new(derived_js).to_py())
+        return secrets.compare_digest(actual, expected)
+    except Exception:
+        return False
+
+def login_page(lang: str, error: str = "") -> str:
+    t=LANGS[lang]
+    err=f'<p class="err">{error}</p>' if error else ""
+    return f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{t["login"]} · SaMaWi Dating</title>
+<style>*{{box-sizing:border-box}}body{{margin:0;padding-top:72px;font-family:system-ui;background:#101114;color:#fff}}.top{{position:fixed;z-index:10;top:0;left:0;right:0;height:72px;background:#101114eF;backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1120px)/2))}}.brand{{font-size:24px;font-weight:800;color:#fff;text-decoration:none}}.brand span{{color:#ff5c72}}.navright{{display:flex;gap:14px;align-items:center}}.top a{{color:#fff;text-decoration:none}}.top .cta{{background:#ff5c72;padding:10px 16px;border-radius:999px;font-weight:700}}.lang{{font-size:12px;color:#aaa!important}}.box{{max-width:520px;margin:70px auto;padding:34px;background:#1b1d22;border:1px solid #30333b;border-radius:25px}}label{{display:block;margin:18px 0 7px;color:#c9cbd1}}input{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font-size:16px}}button{{width:100%;margin-top:25px;padding:15px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.err{{color:#ff8293}}@media(max-width:700px){{.lang{{display:none}}}}</style></head><body>{header_html(lang)}<main class="box"><h1>{t["title"]}</h1>{err}<form method="post" action="/api/login?lang={lang}"><label>{t["email"]}</label><input name="email" type="email" required autocomplete="email"><label>{t["password"]}</label><input name="password" type="password" required autocomplete="current-password"><button>{t["submit"]}</button></form></main></body></html>'''
+
+@app.get("/login", response_class=HTMLResponse)
+async def login(request: Request):
+    lang=lang_for(request)
+    response=HTMLResponse(login_page(lang))
+    response.set_cookie("lang",lang,max_age=31536000,samesite="lax",secure=True)
+    return response
+
+@app.post("/api/login")
+async def do_login(request: Request):
+    lang=lang_for(request); t=LANGS[lang]
+    parsed=urllib.parse.parse_qs((await request.body()).decode("utf-8"),keep_blank_values=True)
+    email=str(parsed.get("email",[""])[0]).strip().lower()
+    password=str(parsed.get("password",[""])[0])
+    env=request.scope["env"]
+    user=await env.DB.prepare("SELECT id,status,password_hash FROM users WHERE email = ? LIMIT 1").bind(email).first()
+    if not user or not await verify_password(password,str(user.password_hash or "")):
+        return HTMLResponse(login_page(lang,t["bad"]),status_code=401)
+    if str(user.status)!="active":
+        return HTMLResponse(login_page(lang,t["inactive"]),status_code=403)
+    token=secrets.token_urlsafe(32)
+    expires=(datetime.now(timezone.utc)+timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    await env.DB.prepare("INSERT INTO sessions (token,user_id,expires_at) VALUES (?, ?, ?)").bind(token,str(user.id),expires).run()
+    response=RedirectResponse("/profile/setup?lang="+lang,status_code=303)
+    response.set_cookie("samawi_session",token,max_age=2592000,httponly=True,secure=True,samesite="lax",path="/")
+    response.set_cookie("lang",lang,max_age=31536000,secure=True,samesite="lax",path="/")
+    return response
+
+@app.get("/logout")
+async def logout(request: Request):
+    token=request.cookies.get("samawi_session","")
+    if token:
+        await request.scope["env"].DB.prepare("DELETE FROM sessions WHERE token = ?").bind(token).run()
+    response=RedirectResponse("/",status_code=303)
+    response.delete_cookie("samawi_session",path="/")
+    return response
+
+@app.get("/profile/setup", response_class=HTMLResponse)
+async def profile_setup(request: Request):
+    lang=lang_for(request)
+    token=request.cookies.get("samawi_session","")
+    row=None
+    if token:
+        row=await request.scope["env"].DB.prepare("SELECT user_id FROM sessions WHERE token=? AND expires_at > datetime('now') LIMIT 1").bind(token).first()
+    if not row:
+        return RedirectResponse("/login?lang="+lang,status_code=303)
+    return HTMLResponse(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Profil · SaMaWi Dating</title><style>body{{margin:0;padding-top:72px;font-family:system-ui;background:#101114;color:#fff}}.top{{position:fixed;top:0;left:0;right:0;height:72px;background:#101114;display:flex;align-items:center;justify-content:space-between;padding:0 max(24px,calc((100vw - 1120px)/2))}}.brand{{font-size:24px;font-weight:800;color:#fff;text-decoration:none}}.brand span{{color:#ff5c72}}.navright{{display:flex;gap:14px;align-items:center}}.top a{{color:#fff;text-decoration:none}}.lang{{font-size:12px;color:#aaa!important}}main{{max-width:760px;margin:70px auto;padding:34px}} </style></head><body>{header_html(lang,True)}<main><h1>Profil einrichten</h1><p>Login funktioniert. Als Nächstes bauen wir hier dein Dating-Profil.</p></main></body></html>''')
+
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return HOME
