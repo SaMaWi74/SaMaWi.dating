@@ -151,3 +151,108 @@ A credible case study should show data and engineering rather than marketing: ob
 - Shared fixed header and DE/EN/FR/IT language handling are being expanded.
 - Profile setup implementation is in progress.
 - Language selector is a stable right-aligned dropdown; DE/EN/FR/IT active, more planned.
+
+
+## Anti-scam field observations — 2026-09-30
+
+The following observations are anonymized behavioural test cases from a third-party dating platform. No private e-mail addresses, telephone numbers, messenger handles, screenshots or identifying message contents are stored here.
+
+### Design principle
+
+SaMaWi Dating must distinguish normal flirting from observable migration/scam behaviour. A pet name, fast familiarity, an empty profile or a location inconsistency is **not** sufficient on its own to classify somebody as fraudulent.
+
+Users should retain agency. Suspicious messages should normally remain accessible behind a warning rather than silently disappearing.
+
+### Case A — immediate off-platform migration
+
+Observed pattern:
+- unsolicited first message;
+- generic compliment / invitation to talk;
+- first message immediately requests contact via several external channels;
+- concrete e-mail, messenger handles and/or phone contact are supplied;
+- virtually no attempt to get acquainted on-platform.
+
+Planned handling:
+- classify as a strong risk event;
+- initially obscure/warn on the message rather than silently delete it;
+- recipient can choose **Show message**, **Block user**, or **Report**;
+- do not permanently ban an account solely because one message contains a service name.
+
+### Case B — delayed migration after apparently normal conversation
+
+Observed sequence:
+1. normal opening question;
+2. quick familiarity/pet name;
+3. user answers with a concrete location;
+4. sender supplies a concrete location that conflicts with the location in the profile;
+5. sender gives little response to contextual details;
+6. abrupt change in register (informal address to a formal, template-like sentence);
+7. after being challenged about the language change, sender asks for an external messenger or e-mail address.
+
+Interpretation:
+- individual signals are weak and may have innocent explanations;
+- the **sequence and combination** are much more informative;
+- location inconsistency may be explained by travel/moving and must not itself trigger enforcement;
+- register changes may result from translation software and must not themselves trigger enforcement;
+- delayed off-platform migration means detection must operate throughout a young conversation, not only on the first message.
+
+### Case C — repeated template after contextual reply
+
+Observed pattern:
+- unsolicited first message asks for multiple external contact methods;
+- recipient responds with a specific, contextual question unrelated to those contact methods;
+- sender does not answer the question;
+- sender repeats substantially the same external-contact block.
+
+This is a particularly useful machine-detectable pattern:
+- high textual similarity to an earlier message;
+- low semantic responsiveness to the recipient's message;
+- repeated external-contact request;
+- young conversation / little established interaction.
+
+The system does not need to determine whether the sender is a bot, a human using templates, or something else. It can assess **observable behaviour** and apply proportionate friction.
+
+### Risk-model implications
+
+Potential features, to be evaluated together rather than as standalone guilt indicators:
+- conversation age / message count;
+- external service names;
+- e-mail/phone/URL/handle patterns and obfuscation;
+- imperative migration language (e.g. requests to write/contact elsewhere);
+- repeated migration attempts;
+- near-duplicate outgoing messages;
+- failure to respond to contextual questions;
+- profile/chat location contradictions;
+- abrupt language/register changes;
+- bulk messaging across recipients;
+- blocks/reports from independent recipients.
+
+Normal flirt language such as early pet names should carry zero or negligible weight by itself.
+
+A useful product rule is:
+
+> **External contact in a first message is a strong warning event, not automatic proof of fraud.**
+
+For established conversations, exchanging contact information can be legitimate. Context, chronology and combined behaviour matter.
+
+### Recipient UX
+
+For a high-risk early message, preferred UX:
+
+> **This message contains external contact details.**  
+> SaMaWi recommends getting to know new contacts here first.
+
+Actions:
+- **Show message**
+- **Block user**
+- **Report**
+
+The original message should be retained for the recipient and moderation/audit purposes subject to privacy and retention rules.
+
+This implements the core principle:
+
+> **Du musst SaMaWi Dating nicht verlassen, um jemanden kennenzulernen.**
+
+### Research note
+
+These cases are behavioural observations, not proof about the identity or intent of any individual account. Documentation and future evaluation should focus on measurable behaviour, false positives/false negatives, proportional interventions and user control.
