@@ -256,3 +256,8 @@ This implements the core principle:
 ### Research note
 
 These cases are behavioural observations, not proof about the identity or intent of any individual account. Documentation and future evaluation should focus on measurable behaviour, false positives/false negatives, proportional interventions and user control.
+
+
+### Extended profile migration (0007)
+
+Production D1 migration `0007_extended_profile.sql` was applied successfully (24/24 statements). It adds the structured extended-profile fields plus multilingual DE/EN/FR/IT taxonomy support for interests and interview questions. Next implementation step: populate the multilingual interest catalogue and connect the Profile tabs “Über mich”, “Interessen” and “Interview” to persistence.
