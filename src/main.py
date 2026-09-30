@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from datetime import date, datetime, timedelta, timezone
 import urllib.parse
 import base64
@@ -141,7 +141,62 @@ async def profile_setup(request: Request):
     current_region=str(row.region or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
     current_postal=str(row.postal_code or "")
     current_country=str(row.country_code or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
-    return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.note{{color:#92959d;font-size:14px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}" enctype="multipart/form-data"><label class="field">Profilbild</label><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" value="{current_name}" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500">{current_bio}</textarea><label class="field">PLZ</label><input type="text" name="postal_code" maxlength="16" value="{current_postal}" required><label class="field">Ort</label><input type="text" name="location_label" maxlength="100" value="{current_location}" required><label class="field">Region / Bundesland</label><input type="text" name="region" maxlength="100" value="{current_region}" required><label class="field">Land</label><input type="text" name="country_code" maxlength="2" value="{current_country}" placeholder="AT" required><p class="note">{labels[7]}</p><label class="field">{labels[5]}</label><div class="choices">{checks}</div><button>{labels[6]}</button></form></section></main></body></html>''',lang)
+    return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea,select{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}.locationbox{{position:relative}}.results{{position:absolute;z-index:20;left:0;right:0;top:100%;background:#17191e;border:1px solid #454954;border-radius:10px;overflow:hidden;display:none;max-height:280px;overflow-y:auto}}.result{{padding:12px 14px;cursor:pointer;border-bottom:1px solid #30333b}}.result:hover{{background:#252830}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.note{{color:#92959d;font-size:14px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}" enctype="multipart/form-data"><label class="field">Profilbild</label><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" value="{current_name}" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500">{current_bio}</textarea><label class="field">Land</label><select id="country" required></select><input type="hidden" name="country_code" id="country_code" value="{current_country}"><label class="field">PLZ / Ort</label><div class="locationbox"><input type="text" id="place_search" autocomplete="off" value="{current_postal} {current_location}" placeholder="z. B. 6230 Brixlegg" required><div id="place_results" class="results"></div></div><input type="hidden" name="postal_code" id="postal_code" value="{current_postal}"><input type="hidden" name="location_label" id="location_label" value="{current_location}"><input type="hidden" name="region" id="region" value="{current_region}"><p class="note">{labels[7]}</p><label class="field">{labels[5]}</label><div class="choices">{checks}</div><button>{labels[6]}</button></form></section></main><script>
+const countryNames=new Intl.DisplayNames(['{lang}'],{{type:'region'}});
+const codes='AD AE AF AG AI AL AM AO AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' ');
+const country=document.getElementById('country'), cc=document.getElementById('country_code');
+codes.map(code=>[code,countryNames.of(code)||code]).sort((a,b)=>a[1].localeCompare(b[1])).forEach(([code,name])=>{{const o=document.createElement('option');o.value=code;o.textContent=name;country.appendChild(o)}});
+country.value=cc.value||'AT'; cc.value=country.value;
+country.addEventListener('change',()=>{{cc.value=country.value; clearPlace(); search.value='';}});
+const search=document.getElementById('place_search'), results=document.getElementById('place_results');
+function clearPlace(){{document.getElementById('postal_code').value='';document.getElementById('location_label').value='';document.getElementById('region').value='';}}
+let timer;
+search.addEventListener('input',()=>{{clearPlace();clearTimeout(timer);const q=search.value.trim();if(q.length<2){{results.style.display='none';return}}timer=setTimeout(async()=>{{const r=await fetch('/api/places?country='+encodeURIComponent(country.value)+'&q='+encodeURIComponent(q)+'&lang={lang}');const data=await r.json();results.innerHTML='';data.forEach(p=>{{const d=document.createElement('div');d.className='result';d.textContent=p.label;d.onclick=()=>{{search.value=p.label;document.getElementById('postal_code').value=p.postal_code||'';document.getElementById('location_label').value=p.locality||'';document.getElementById('region').value=p.region||'';cc.value=country.value;results.style.display='none'}};results.appendChild(d)}});results.style.display=data.length?'block':'none'}},250)}});
+document.addEventListener('click',e=>{{if(!e.target.closest('.locationbox'))results.style.display='none'}});
+</script></body></html>''',lang)
+
+
+@app.get("/api/places")
+async def places(request: Request):
+    q=request.query_params.get("q","").strip()
+    country=request.query_params.get("country","").strip().upper()
+    lang=request.query_params.get("lang","en").lower()
+    if len(q)<2 or len(country)!=2:
+        return JSONResponse([])
+    if lang not in ("de","en","fr","it"):
+        lang="en"
+    url="https://photon.komoot.io/api/?" + urllib.parse.urlencode({"q":q,"limit":"12","lang":lang})
+    try:
+        response=await fetch(url,headers={"User-Agent":"SaMaWi-Dating/0.2"})
+        if not response.ok:
+            return JSONResponse([])
+        payload=dict(await response.json())
+        out=[]
+        seen=set()
+        for feature in payload.get("features",[]):
+            props=dict(feature.get("properties",{}))
+            cc=str(props.get("countrycode","")).upper()
+            if cc!=country:
+                continue
+            locality=str(props.get("city") or props.get("town") or props.get("village") or props.get("locality") or props.get("name") or "").strip()
+            postal=str(props.get("postcode") or "").strip()
+            region=str(props.get("state") or props.get("county") or "").strip()
+            if not locality:
+                continue
+            key=(postal,locality,region)
+            if key in seen:
+                continue
+            seen.add(key)
+            label=(" ".join(x for x in (postal,locality) if x) + (", "+region if region else "")).strip()
+            coords=feature.get("geometry",{}).get("coordinates",[])
+            out.append({"label":label,"postal_code":postal,"locality":locality,"region":region,
+                        "longitude":coords[0] if len(coords)>1 else None,"latitude":coords[1] if len(coords)>1 else None})
+            if len(out)>=8:
+                break
+        return JSONResponse(out)
+    except Exception as exc:
+        print("PLACE_SEARCH error="+str(exc)[:200])
+        return JSONResponse([])
 
 @app.post("/api/profile")
 async def save_profile(request: Request):
