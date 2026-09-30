@@ -97,14 +97,14 @@ INSERT OR IGNORE INTO interest_categories(code,label_de,label_en,label_fr,label_
 ('extreme_sports','Extremsport','Extreme sports','Sports extrêmes','Sport estremi',180),
 ('ball_sports','Ballsport','Ball sports','Sports de balle','Sport con la palla',190);
 
-INSERT OR IGNORE INTO interview_questions(code,question_de,sort_order) VALUES
-('describe_yourself','Beschreibe dich in ein paar Sätzen',10),
-('desired_partner','Beschreibe deinen Wunschpartner',20),
-('ideal_relationship','Wie sieht deine optimale Beziehung aus?',30),
-('breakfast','Was gibt’s bei Dir zum Frühstück?',40),
-('important_in_life','Was ist Dir wichtig im Leben?',50),
-('type_zodiac','Welcher Typ bist Du? Welches Sternzeichen/Aszendent hast Du?',60),
-('perfect_holiday','Beschreibe Deinen perfekten Urlaub.',70),
-('typical_weekend','Wie sieht Dein Wochenende typischerweise aus?',80),
-('free_time','Was machst Du in Deiner Freizeit?',90),
-('desert_island','Welche 3 Dinge würdest Du auf eine einsame Insel nehmen, und warum?',100);
+INSERT OR IGNORE INTO interview_questions(code,question_de,question_en,question_fr,question_it,sort_order) VALUES
+('describe_yourself','Beschreibe dich in ein paar Sätzen','Describe yourself in a few sentences','Décris-toi en quelques phrases','Descriviti in poche frasi',10),
+('desired_partner','Beschreibe deinen Wunschpartner','Describe the partner you are looking for','Décris le partenaire que tu recherches','Descrivi il partner che stai cercando',20),
+('ideal_relationship','Wie sieht deine optimale Beziehung aus?','What does your ideal relationship look like?','À quoi ressemble ta relation idéale ?','Com’è la tua relazione ideale?',30),
+('breakfast','Was gibt’s bei Dir zum Frühstück?','What do you have for breakfast?','Qu’est-ce que tu prends au petit-déjeuner ?','Cosa mangi a colazione?',40),
+('important_in_life','Was ist Dir wichtig im Leben?','What is important to you in life?','Qu’est-ce qui est important pour toi dans la vie ?','Cosa è importante per te nella vita?',50),
+('type_zodiac','Welcher Typ bist Du? Welches Sternzeichen/Aszendent hast Du?','What kind of person are you? What is your zodiac sign/ascendant?','Quel genre de personne es-tu ? Quel est ton signe astrologique/ascendant ?','Che tipo di persona sei? Qual è il tuo segno zodiacale/ascendente?',60),
+('perfect_holiday','Beschreibe Deinen perfekten Urlaub.','Describe your perfect holiday.','Décris tes vacances parfaites.','Descrivi la tua vacanza perfetta.',70),
+('typical_weekend','Wie sieht Dein Wochenende typischerweise aus?','What does a typical weekend look like for you?','À quoi ressemble généralement ton week-end ?','Com’è di solito il tuo fine settimana?',80),
+('free_time','Was machst Du in Deiner Freizeit?','What do you do in your free time?','Que fais-tu pendant ton temps libre ?','Cosa fai nel tempo libero?',90),
+('desert_island','Welche 3 Dinge würdest Du auf eine einsame Insel nehmen, und warum?','Which 3 things would you take to a desert island, and why?','Quelles sont les 3 choses que tu emporterais sur une île déserte, et pourquoi ?','Quali 3 cose porteresti su un’isola deserta, e perché?',100);
