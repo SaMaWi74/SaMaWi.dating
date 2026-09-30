@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from datetime import date, datetime, timedelta, timezone
 import urllib.parse
 import base64
@@ -125,10 +125,10 @@ async def profile_setup(request: Request):
     if not row:
         return HTMLResponse("",status_code=303,headers={"Location":"/login?lang="+lang})
     labels={
-      "de":("Dein Profil","Anzeigename","Über mich","Ort / Region","Suchradius","Was suchst du?","Speichern","Dein genauer Standort wird nicht öffentlich angezeigt."),
-      "en":("Your profile","Display name","About me","Town / region","Search radius","What are you looking for?","Save","Your exact location is never shown publicly."),
-      "fr":("Ton profil","Nom affiché","À propos de moi","Ville / région","Rayon de recherche","Que recherches-tu ?","Enregistrer","Ta position exacte n’est jamais affichée publiquement."),
-      "it":("Il tuo profilo","Nome visualizzato","Su di me","Città / regione","Raggio di ricerca","Cosa cerchi?","Salva","La tua posizione esatta non viene mai mostrata pubblicamente.")
+      "de":("Dein Profil","Anzeigename","Über mich","Was suchst du?","Speichern","Dein genauer Standort wird nicht öffentlich angezeigt.","Profilbild","Land","PLZ / Ort","z. B. 6230 Brixlegg","Bild ändern"),
+      "en":("Your profile","Display name","About me","What are you looking for?","Save","Your exact location is never shown publicly.","Profile photo","Country","Postal code / town","e.g. 6230 Brixlegg","Change photo"),
+      "fr":("Ton profil","Nom affiché","À propos de moi","Que recherches-tu ?","Enregistrer","Ta position exacte n’est jamais affichée publiquement.","Photo de profil","Pays","Code postal / ville","p. ex. 6230 Brixlegg","Changer la photo"),
+      "it":("Il tuo profilo","Nome visualizzato","Su di me","Cosa cerchi?","Salva","La tua posizione esatta non viene mai mostrata pubblicamente.","Foto profilo","Paese","CAP / località","es. 6230 Brixlegg","Cambia foto")
     }[lang]
     intentions={"de":["Beziehung","Dating","Freundschaft","Aktivitäten","Friends+","Abenteuer"],"en":["Relationship","Dating","Friendship","Activities","Friends+","Adventure"],"fr":["Relation","Rencontres","Amitié","Activités","Friends+","Aventure"],"it":["Relazione","Dating","Amicizia","Attività","Friends+","Avventura"]}[lang]
     saved=await request.scope["env"].DB.prepare("SELECT intention_code FROM profile_intentions WHERE user_id=?").bind(str(row.user_id)).all()
@@ -141,7 +141,7 @@ async def profile_setup(request: Request):
     current_region=str(row.region or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
     current_postal=str(row.postal_code or "")
     current_country=str(row.country_code or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
-    return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea,select{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}.locationbox{{position:relative}}.results{{position:absolute;z-index:20;left:0;right:0;top:100%;background:#17191e;border:1px solid #454954;border-radius:10px;overflow:hidden;display:none;max-height:280px;overflow-y:auto}}.result{{padding:12px 14px;cursor:pointer;border-bottom:1px solid #30333b}}.result:hover{{background:#252830}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.note{{color:#92959d;font-size:14px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}" enctype="multipart/form-data"><label class="field">Profilbild</label><input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" value="{current_name}" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500">{current_bio}</textarea><label class="field">Land</label><select id="country" required></select><input type="hidden" name="country_code" id="country_code" value="{current_country}"><label class="field">PLZ / Ort</label><div class="locationbox"><input type="text" id="place_search" autocomplete="off" value="{current_postal} {current_location}" placeholder="z. B. 6230 Brixlegg" required><div id="place_results" class="results"></div></div><input type="hidden" name="postal_code" id="postal_code" value="{current_postal}"><input type="hidden" name="location_label" id="location_label" value="{current_location}"><input type="hidden" name="region" id="region" value="{current_region}"><p class="note">{labels[7]}</p><label class="field">{labels[5]}</label><div class="choices">{checks}</div><button>{labels[6]}</button></form></section></main><script>
+    return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea,select{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}.locationbox{{position:relative}}.results{{position:absolute;z-index:20;left:0;right:0;top:100%;background:#17191e;border:1px solid #454954;border-radius:10px;overflow:hidden;display:none;max-height:280px;overflow-y:auto}}.result{{padding:12px 14px;cursor:pointer;border-bottom:1px solid #30333b}}.result:hover{{background:#252830}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.note{{color:#92959d;font-size:14px}}.photo-current img{{width:160px;height:160px;object-fit:cover;border-radius:18px;border:1px solid #454954;margin:0 0 12px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}" enctype="multipart/form-data"><label class="field">{labels[6]}</label>{('<div class="photo-current"><img src="/profile/photo" alt="'+labels[6]+'"></div>' if row.profile_photo_key else '')}<input type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" value="{current_name}" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500">{current_bio}</textarea><label class="field">{labels[7]}</label><select id="country" required></select><input type="hidden" name="country_code" id="country_code" value="{current_country}"><label class="field">{labels[8]}</label><div class="locationbox"><input type="text" id="place_search" autocomplete="off" value="{current_postal} {current_location}" placeholder="{labels[9]}" required><div id="place_results" class="results"></div></div><input type="hidden" name="postal_code" id="postal_code" value="{current_postal}"><input type="hidden" name="location_label" id="location_label" value="{current_location}"><input type="hidden" name="region" id="region" value="{current_region}"><p class="note">{labels[5]}</p><label class="field">{labels[3]}</label><div class="choices">{checks}</div><button>{labels[4]}</button></form></section></main><script>
 const countryNames=new Intl.DisplayNames(['{lang}'],{{type:'region'}});
 const codes='AD AE AF AG AI AL AM AO AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' ');
 const country=document.getElementById('country'), cc=document.getElementById('country_code');
@@ -155,6 +155,22 @@ search.addEventListener('input',()=>{{clearPlace();clearTimeout(timer);const q=s
 document.addEventListener('click',e=>{{if(!e.target.closest('.locationbox'))results.style.display='none'}});
 </script></body></html>''',lang)
 
+
+@app.get("/profile/photo")
+async def profile_photo(request: Request):
+    token=request.cookies.get("samawi_session","")
+    if not token:
+        return Response(status_code=404)
+    row=await request.scope["env"].DB.prepare("SELECT p.profile_photo_key FROM sessions s JOIN profiles p ON p.user_id=s.user_id WHERE s.token=? AND s.expires_at > datetime('now') LIMIT 1").bind(token).first()
+    if not row or not row.profile_photo_key:
+        return Response(status_code=404)
+    obj=await request.scope["env"].PHOTOS.get(str(row.profile_photo_key))
+    if not obj:
+        return Response(status_code=404)
+    data=bytes(Uint8Array.new(await obj.arrayBuffer()).to_py())
+    key=str(row.profile_photo_key).lower()
+    media="image/jpeg" if key.endswith((".jpg",".jpeg")) else ("image/png" if key.endswith(".png") else "image/webp")
+    return Response(content=data,media_type=media,headers={"Cache-Control":"private, max-age=300"})
 
 @app.get("/api/places")
 async def places(request: Request):
@@ -229,7 +245,7 @@ async def save_profile(request: Request):
     if photo and getattr(photo,"filename",""):
         data=await photo.read()
         photo_type=str(getattr(photo,"content_type","") or "")
-        if photo_type not in ("image/jpeg","image/png","image/webp") or len(data)>8*1024*1024:
+        if photo_type not in ("image/jpeg","image/png","image/webp") or len(data)>3*1024*1024:
             return HTMLResponse("Invalid profile photo",status_code=400)
         ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[photo_type]
         photo_key="profiles/"+uid+"/"+str(uuid.uuid4())+"."+ext
