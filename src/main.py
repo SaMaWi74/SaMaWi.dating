@@ -254,9 +254,15 @@ async def save_profile(request: Request):
     location=str(parsed.get("location_label",[""])[0]).strip()
     region=str(parsed.get("region",[""])[0]).strip()
     country=str(parsed.get("country_code",[""])[0]).strip().upper()
+    env=request.scope["env"]; uid=str(session.user_id)
+    if form and str(form.get("delete_photo") or "") == "1":
+        existing=await env.DB.prepare("SELECT profile_photo_key FROM profiles WHERE user_id=? LIMIT 1").bind(uid).first()
+        if existing and existing.profile_photo_key:
+            await env.PHOTOS.delete(str(existing.profile_photo_key))
+            await env.DB.prepare("UPDATE profiles SET profile_photo_key=NULL WHERE user_id=?").bind(uid).run()
+        return HTMLResponse("",status_code=303,headers={"Location":"/profile/setup?lang="+lang})
     if not name or not postal_code or not location or not region or len(country)!=2:
         return HTMLResponse("Missing profile data",status_code=400)
-    env=request.scope["env"]; uid=str(session.user_id)
     photo=form.get("profile_photo") if form else None
     photo_key=None
     if photo and getattr(photo,"filename",""):
