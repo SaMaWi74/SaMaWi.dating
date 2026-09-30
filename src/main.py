@@ -141,7 +141,13 @@ async def profile_setup(request: Request):
     current_region=str(row.region or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
     current_postal=str(row.postal_code or "")
     current_country=str(row.country_code or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
-    return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea,select{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}.locationbox{{position:relative}}.results{{position:absolute;z-index:20;left:0;right:0;top:100%;background:#17191e;border:1px solid #454954;border-radius:10px;overflow:hidden;display:none;max-height:280px;overflow-y:auto}}.result{{padding:12px 14px;cursor:pointer;border-bottom:1px solid #30333b}}.result:hover{{background:#252830}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px;cursor:pointer}}.note{{color:#92959d;font-size:14px}}.photo-current{{position:relative;display:table;margin-bottom:14px}}.photo-current img{{display:block;max-width:240px;max-height:240px;width:auto;height:auto;border-radius:18px;border:1px solid #454954}}.photo-delete{{position:absolute;top:8px;right:8px;width:30px;height:30px;margin:0;padding:0;border:1px solid #ffffff55;border-radius:50%;background:#101114cc;color:#fff;font-size:22px;line-height:26px;cursor:pointer}}.photo-delete:hover{{background:#ff5c72}}.photo-input{{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}}.upload-button{{display:inline-block;padding:11px 18px;border:1px solid #454954;border-radius:999px;background:#111318;color:#fff;font-weight:700;cursor:pointer}}.upload-button:hover{{border-color:#ff5c72;background:#24262d}}.file-name{{margin-left:10px;color:#92959d;font-size:14px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}" enctype="multipart/form-data"><label class="field">{labels[6]}</label>{('<div class="photo-current"><img src="/profile/photo?v={urllib.parse.quote(str(row.profile_photo_key or ''))}" alt="'+labels[6]+'"><button class="photo-delete" type="submit" name="delete_photo" value="1" formnovalidate aria-label="'+labels[12]+'" title="'+labels[12]+'">×</button></div>' if row.profile_photo_key else '')}<input class="photo-input" id="profile_photo" type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><label class="upload-button" for="profile_photo">{labels[11]}</label><span class="file-name" id="file_name"></span><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" value="{current_name}" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500">{current_bio}</textarea><label class="field">{labels[7]}</label><select id="country" required></select><input type="hidden" name="country_code" id="country_code" value="{current_country}"><label class="field">{labels[8]}</label><div class="locationbox"><input type="text" id="place_search" autocomplete="off" value="{current_postal} {current_location}" placeholder="{labels[9]}" required><div id="place_results" class="results"></div></div><input type="hidden" name="postal_code" id="postal_code" value="{current_postal}"><input type="hidden" name="location_label" id="location_label" value="{current_location}"><input type="hidden" name="region" id="region" value="{current_region}"><p class="note">{labels[5]}</p><label class="field">{labels[3]}</label><div class="choices">{checks}</div><button>{labels[4]}</button></form></section></main><script>
+    photos_result=await request.scope["env"].DB.prepare("SELECT id,r2_key,is_primary,sort_order FROM profile_photos WHERE user_id=? ORDER BY is_primary DESC,sort_order,created_at").bind(str(row.user_id)).all()
+    photos=list(photos_result.results)
+    gallery="".join(
+        '<div class="photo-item'+(' primary' if int(p.is_primary or 0)==1 else '')+'"><img src="/profile/photo/'+str(p.id)+'?v='+urllib.parse.quote(str(p.r2_key))+'" alt="'+labels[6]+'"><div class="photo-actions"><button type="button" class="photo-primary" data-photo="'+str(p.id)+'" title="Standardbild">★</button><button type="button" class="photo-remove" data-photo="'+str(p.id)+'" aria-label="'+labels[12]+'" title="'+labels[12]+'">×</button></div></div>'
+        for p in photos
+    )
+    return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea,select{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}.locationbox{{position:relative}}.results{{position:absolute;z-index:20;left:0;right:0;top:100%;background:#17191e;border:1px solid #454954;border-radius:10px;overflow:hidden;display:none;max-height:280px;overflow-y:auto}}.result{{padding:12px 14px;cursor:pointer;border-bottom:1px solid #30333b}}.result:hover{{background:#252830}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px;cursor:pointer}}.note{{color:#92959d;font-size:14px}}.photo-gallery{{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:14px}}.photo-item{{position:relative;width:150px;height:190px}}.photo-item img{{width:150px;height:190px;object-fit:cover;border-radius:18px;border:2px solid #454954}}.photo-item.primary img{{border-color:#ffcf4a}}.photo-actions{{position:absolute;top:7px;left:7px;right:7px;display:flex;justify-content:space-between}}.photo-actions button{{width:30px;height:30px;margin:0;padding:0;border:1px solid #ffffff55;border-radius:50%;background:#101114cc;color:#fff;font-size:20px;line-height:26px;cursor:pointer}}.photo-item.primary .photo-primary{{background:#ffcf4a;color:#111}}.photo-remove:hover{{background:#ff5c72}}.photo-primary:hover{{background:#ffcf4a;color:#111}}.photo-input{{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}}.upload-button{{display:inline-block;padding:11px 18px;border:1px solid #454954;border-radius:999px;background:#111318;color:#fff;font-weight:700;cursor:pointer}}.upload-button:hover{{border-color:#ff5c72;background:#24262d}}.file-name{{margin-left:10px;color:#92959d;font-size:14px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}" enctype="multipart/form-data"><label class="field">{labels[6]}</label><div class="photo-gallery">{gallery}</div><input class="photo-input" id="profile_photo" type="file" name="profile_photo" accept="image/jpeg,image/png,image/webp"><label class="upload-button" for="profile_photo">{labels[11]}</label><span class="file-name" id="file_name"></span><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" value="{current_name}" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500">{current_bio}</textarea><label class="field">{labels[7]}</label><select id="country" required></select><input type="hidden" name="country_code" id="country_code" value="{current_country}"><label class="field">{labels[8]}</label><div class="locationbox"><input type="text" id="place_search" autocomplete="off" value="{current_postal} {current_location}" placeholder="{labels[9]}" required><div id="place_results" class="results"></div></div><input type="hidden" name="postal_code" id="postal_code" value="{current_postal}"><input type="hidden" name="location_label" id="location_label" value="{current_location}"><input type="hidden" name="region" id="region" value="{current_region}"><p class="note">{labels[5]}</p><label class="field">{labels[3]}</label><div class="choices">{checks}</div><button>{labels[4]}</button></form></section></main><script>
 document.getElementById('profile_photo').addEventListener('change',async e=>{{
  const input=e.target,file=input.files[0],name=document.getElementById('file_name');
  if(!file){{name.textContent='';return}}
@@ -166,6 +172,14 @@ document.getElementById('profile_photo').addEventListener('change',async e=>{{
   name.textContent=file.name+' · Upload fehlgeschlagen';
  }}
 }});
+document.querySelectorAll('.photo-primary').forEach(b=>b.addEventListener('click',async()=>{{
+ const r=await fetch('/api/profile/photo/'+encodeURIComponent(b.dataset.photo)+'/primary?lang={lang}',{{method:'POST',credentials:'same-origin'}});
+ if(r.ok) window.location.reload();
+}}));
+document.querySelectorAll('.photo-remove').forEach(b=>b.addEventListener('click',async()=>{{
+ const r=await fetch('/api/profile/photo/'+encodeURIComponent(b.dataset.photo)+'/delete?lang={lang}',{{method:'POST',credentials:'same-origin'}});
+ if(r.ok) window.location.reload();
+}}));
 const countryNames=new Intl.DisplayNames(['{lang}'],{{type:'region'}});
 const codes='AD AE AF AG AI AL AM AO AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' ');
 const country=document.getElementById('country'), cc=document.getElementById('country_code');
@@ -195,6 +209,23 @@ async def delete_profile_photo(request: Request):
         await env.PHOTOS.delete(key)
         await env.DB.prepare("UPDATE profiles SET profile_photo_key=NULL WHERE user_id=?").bind(str(row.user_id)).run()
     return HTMLResponse("",status_code=303,headers={"Location":"/profile/setup?lang="+lang})
+
+@app.get("/profile/photo/{photo_id}")
+async def profile_photo_by_id(request: Request, photo_id: str):
+    token=request.cookies.get("samawi_session","")
+    if not token:
+        return Response(status_code=404)
+    env=request.scope["env"]
+    row=await env.DB.prepare("SELECT pp.r2_key FROM sessions s JOIN profile_photos pp ON pp.user_id=s.user_id WHERE s.token=? AND s.expires_at > datetime('now') AND pp.id=? LIMIT 1").bind(token,photo_id).first()
+    if not row:
+        return Response(status_code=404)
+    obj=await env.PHOTOS.get(str(row.r2_key))
+    if not obj:
+        return Response(status_code=404)
+    data=bytes(Uint8Array.new(await obj.arrayBuffer()).to_py())
+    key=str(row.r2_key).lower()
+    media="image/jpeg" if key.endswith((".jpg",".jpeg")) else ("image/png" if key.endswith(".png") else "image/webp")
+    return Response(content=data,media_type=media,headers={"Cache-Control":"private, no-cache, must-revalidate"})
 
 @app.get("/profile/photo")
 async def profile_photo(request: Request):
@@ -254,6 +285,48 @@ async def places(request: Request):
         print("PLACE_SEARCH error="+str(exc)[:200])
         return JSONResponse([])
 
+@app.post("/api/profile/photo/{photo_id}/primary")
+async def set_primary_profile_photo(request: Request, photo_id: str):
+    token=request.cookies.get("samawi_session","")
+    if not token:
+        return Response(status_code=401)
+    env=request.scope["env"]
+    session=await env.DB.prepare("SELECT user_id FROM sessions WHERE token=? AND expires_at > datetime('now') LIMIT 1").bind(token).first()
+    if not session:
+        return Response(status_code=401)
+    uid=str(session.user_id)
+    photo=await env.DB.prepare("SELECT r2_key FROM profile_photos WHERE id=? AND user_id=? LIMIT 1").bind(photo_id,uid).first()
+    if not photo:
+        return Response(status_code=404)
+    await env.DB.prepare("UPDATE profile_photos SET is_primary=0 WHERE user_id=?").bind(uid).run()
+    await env.DB.prepare("UPDATE profile_photos SET is_primary=1 WHERE id=? AND user_id=?").bind(photo_id,uid).run()
+    await env.DB.prepare("UPDATE profiles SET profile_photo_key=? WHERE user_id=?").bind(str(photo.r2_key),uid).run()
+    return {"ok":True}
+
+@app.post("/api/profile/photo/{photo_id}/delete")
+async def delete_gallery_photo(request: Request, photo_id: str):
+    token=request.cookies.get("samawi_session","")
+    if not token:
+        return Response(status_code=401)
+    env=request.scope["env"]
+    session=await env.DB.prepare("SELECT user_id FROM sessions WHERE token=? AND expires_at > datetime('now') LIMIT 1").bind(token).first()
+    if not session:
+        return Response(status_code=401)
+    uid=str(session.user_id)
+    photo=await env.DB.prepare("SELECT r2_key,is_primary FROM profile_photos WHERE id=? AND user_id=? LIMIT 1").bind(photo_id,uid).first()
+    if not photo:
+        return Response(status_code=404)
+    await env.PHOTOS.delete(str(photo.r2_key))
+    await env.DB.prepare("DELETE FROM profile_photos WHERE id=? AND user_id=?").bind(photo_id,uid).run()
+    if int(photo.is_primary or 0)==1:
+        replacement=await env.DB.prepare("SELECT id,r2_key FROM profile_photos WHERE user_id=? ORDER BY sort_order,created_at LIMIT 1").bind(uid).first()
+        if replacement:
+            await env.DB.prepare("UPDATE profile_photos SET is_primary=1 WHERE id=?").bind(str(replacement.id)).run()
+            await env.DB.prepare("UPDATE profiles SET profile_photo_key=? WHERE user_id=?").bind(str(replacement.r2_key),uid).run()
+        else:
+            await env.DB.prepare("UPDATE profiles SET profile_photo_key=NULL WHERE user_id=?").bind(uid).run()
+    return {"ok":True}
+
 @app.post("/api/profile/photo/upload")
 async def upload_profile_photo(request: Request):
     lang=lang_for(request)
@@ -272,13 +345,18 @@ async def upload_profile_photo(request: Request):
     if photo_type not in ("image/jpeg","image/png","image/webp") or len(data)>3*1024*1024:
         return HTMLResponse("Invalid profile photo",status_code=400)
     env=request.scope["env"]; uid=str(session.user_id)
+    count=await env.DB.prepare("SELECT COUNT(*) AS n FROM profile_photos WHERE user_id=?").bind(uid).first()
+    if count and int(count.n)>=6:
+        return HTMLResponse("Maximum 6 profile photos",status_code=400)
     ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[photo_type]
-    photo_key="profiles/"+uid+"/"+str(uuid.uuid4())+"."+ext
-    existing=await env.DB.prepare("SELECT profile_photo_key FROM profiles WHERE user_id=? LIMIT 1").bind(uid).first()
+    photo_id=str(uuid.uuid4())
+    photo_key="profiles/"+uid+"/"+photo_id+"."+ext
+    primary=1 if not count or int(count.n)==0 else 0
+    order_row=await env.DB.prepare("SELECT COALESCE(MAX(sort_order),-1)+1 AS next_order FROM profile_photos WHERE user_id=?").bind(uid).first()
     await env.PHOTOS.put(photo_key,data)
-    await env.DB.prepare("UPDATE profiles SET profile_photo_key=? WHERE user_id=?").bind(photo_key,uid).run()
-    if existing and existing.profile_photo_key and str(existing.profile_photo_key)!=photo_key:
-        await env.PHOTOS.delete(str(existing.profile_photo_key))
+    await env.DB.prepare("INSERT INTO profile_photos (id,user_id,r2_key,is_primary,sort_order) VALUES (?,?,?,?,?)").bind(photo_id,uid,photo_key,primary,int(order_row.next_order)).run()
+    if primary:
+        await env.DB.prepare("UPDATE profiles SET profile_photo_key=? WHERE user_id=?").bind(photo_key,uid).run()
     return {"ok":True}
 
 @app.post("/api/profile")
