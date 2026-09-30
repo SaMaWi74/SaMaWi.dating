@@ -33,7 +33,7 @@ def lang_for(request: Request) -> str:
 
 def header_html(lang: str, logged_in: bool = False, path: str = "/") -> str:
     t=LANGS[lang]
-    auth = '<a href="/logout">Logout</a>' if logged_in else f'<a href="/login?lang={lang}">{t["login"]}</a><a class="cta" href="/register?lang={lang}">{t["register"]}</a>'
+    auth = f'<a href="/profile/setup?lang={lang}">Mein Profil</a><a href="/logout">Logout</a>' if logged_in else f'<a href="/login?lang={lang}">{t["login"]}</a><a class="cta" href="/register?lang={lang}">{t["register"]}</a>'
     available = [("de","Deutsch"),("en","English"),("fr","Français"),("it","Italiano")]
     planned = ["Español","Português","Nederlands","Polski","Čeština","Magyar","Română","Ελληνικά","Türkçe","Українська","Русский","中文（简体）","中文（繁體）","日本語","한국어"]
     options = "".join(f'<option value="{code}"{" selected" if code==lang else ""}>{label}</option>' for code,label in available)
