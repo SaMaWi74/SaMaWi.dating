@@ -46,9 +46,9 @@ def page_response(html: str, lang: str, status_code: int = 200) -> HTMLResponse:
     r.set_cookie("lang",lang,max_age=31536000,secure=True,samesite="lax",path="/")
     return r
 
-def home_page(lang: str) -> str:
+def home_page(lang: str, logged_in: bool = False) -> str:
     t=LANGS[lang]; rows="".join(f'<div class="row"><span class="check">✓</span>{x}</div>' for x in t["rows"])
-    return f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SaMaWi Dating</title><style>{COMMON_CSS}main{{max-width:1120px;margin:auto;padding:90px 24px 70px;display:grid;grid-template-columns:1.15fr .85fr;gap:70px;align-items:center}}h1{{font-size:clamp(46px,7vw,78px);line-height:.98;margin:0 0 25px}}h1 em{{font-style:normal;color:#ff5c72}}.lead{{font-size:20px;line-height:1.6;color:#c9cbd1;max-width:650px}}.actions{{margin-top:34px;display:flex;gap:14px;flex-wrap:wrap}}.button{{display:inline-block;padding:15px 24px;border-radius:999px;text-decoration:none;font-weight:800}}.primary{{background:#ff5c72;color:white}}.secondary{{border:1px solid #4a4d55;color:white}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:28px;padding:32px;box-shadow:0 30px 80px #0008}}.card h2{{margin-top:0;font-size:28px}}.row{{padding:15px 0;border-bottom:1px solid #30333b}}.row:last-child{{border:0}}.check{{color:#67dda0;font-weight:800;margin-right:10px}}footer{{text-align:center;color:#777;padding:40px 20px}}@media(max-width:800px){{main{{grid-template-columns:1fr;padding-top:45px}}}}</style></head><body>{header_html(lang,path="/")}<main><section><h1>{t["home_title"]}<br><em>{t["home_near"]}</em></h1><p class="lead">{t["home_lead"]}</p><div class="actions"><a class="button primary" href="/register?lang={lang}">{t["start"]}</a><a class="button secondary" href="#why">{t["why"]}</a></div></section><section class="card" id="why"><h2>{t["card"]}</h2>{rows}</section></main><footer>© 2026 SaMaWi Dating · dating.samawi.co.uk</footer></body></html>'''
+    return f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SaMaWi Dating</title><style>{COMMON_CSS}main{{max-width:1120px;margin:auto;padding:90px 24px 70px;display:grid;grid-template-columns:1.15fr .85fr;gap:70px;align-items:center}}h1{{font-size:clamp(46px,7vw,78px);line-height:.98;margin:0 0 25px}}h1 em{{font-style:normal;color:#ff5c72}}.lead{{font-size:20px;line-height:1.6;color:#c9cbd1;max-width:650px}}.actions{{margin-top:34px;display:flex;gap:14px;flex-wrap:wrap}}.button{{display:inline-block;padding:15px 24px;border-radius:999px;text-decoration:none;font-weight:800}}.primary{{background:#ff5c72;color:white}}.secondary{{border:1px solid #4a4d55;color:white}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:28px;padding:32px;box-shadow:0 30px 80px #0008}}.card h2{{margin-top:0;font-size:28px}}.row{{padding:15px 0;border-bottom:1px solid #30333b}}.row:last-child{{border:0}}.check{{color:#67dda0;font-weight:800;margin-right:10px}}footer{{text-align:center;color:#777;padding:40px 20px}}@media(max-width:800px){{main{{grid-template-columns:1fr;padding-top:45px}}}}</style></head><body>{header_html(lang,logged_in,path="/")}<main><section><h1>{t["home_title"]}<br><em>{t["home_near"]}</em></h1><p class="lead">{t["home_lead"]}</p><div class="actions"><a class="button primary" href="/register?lang={lang}">{t["start"]}</a><a class="button secondary" href="#why">{t["why"]}</a></div></section><section class="card" id="why"><h2>{t["card"]}</h2>{rows}</section></main><footer>© 2026 SaMaWi Dating · dating.samawi.co.uk</footer></body></html>'''
 
 def register_page(lang: str) -> str:
     t=LANGS[lang]
@@ -168,7 +168,12 @@ async def save_profile(request: Request):
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     lang=lang_for(request)
-    return page_response(home_page(lang),lang)
+    token=request.cookies.get("samawi_session","")
+    logged_in=False
+    if token:
+        session=await request.scope["env"].DB.prepare("SELECT user_id FROM sessions WHERE token=? AND expires_at > datetime('now') LIMIT 1").bind(token).first()
+        logged_in=bool(session)
+    return page_response(home_page(lang,logged_in),lang)
 
 @app.get("/register", response_class=HTMLResponse)
 async def register(request: Request):
