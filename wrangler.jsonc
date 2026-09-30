@@ -17,6 +17,7 @@
       "custom_domain": true
     }
   ],
+  "r2_buckets": [{"binding":"PHOTOS","bucket_name":"samawi-dating-photos"}],
   "d1_databases": [
     {
       "binding": "DB",
