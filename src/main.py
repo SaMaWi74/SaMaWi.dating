@@ -121,7 +121,7 @@ async def profile_setup(request: Request):
     token=request.cookies.get("samawi_session","")
     row=None
     if token:
-        row=await request.scope["env"].DB.prepare("SELECT s.user_id,p.user_id AS profile_id,p.display_name,p.bio,p.locality FROM sessions s LEFT JOIN profiles p ON p.user_id=s.user_id WHERE s.token=? AND s.expires_at > datetime('now') LIMIT 1").bind(token).first()
+        row=await request.scope["env"].DB.prepare("SELECT s.user_id,p.user_id AS profile_id,p.display_name,p.bio,p.country_code,p.region,p.locality FROM sessions s LEFT JOIN profiles p ON p.user_id=s.user_id WHERE s.token=? AND s.expires_at > datetime('now') LIMIT 1").bind(token).first()
     if not row:
         return HTMLResponse("",status_code=303,headers={"Location":"/login?lang="+lang})
     labels={
@@ -138,7 +138,9 @@ async def profile_setup(request: Request):
     current_name=str(row.display_name or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
     current_bio=str(row.bio or "").replace("&","&amp;").replace("<","&lt;")
     current_location=str(row.locality or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
-    return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.note{{color:#92959d;font-size:14px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}"><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" value="{current_name}" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500">{current_bio}</textarea><label class="field">{labels[3]}</label><input type="text" name="location_label" maxlength="100" value="{current_location}" required><p class="note">{labels[7]}</p><label class="field">{labels[4]} (km)</label><input type="number" name="radius_km" min="1" max="500" value="50" required><label class="field">{labels[5]}</label><div class="choices">{checks}</div><button>{labels[6]}</button></form></section></main></body></html>''',lang)
+    current_region=str(row.region or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
+    current_country=str(row.country_code or "").replace("&","&amp;").replace('"',"&quot;").replace("<","&lt;")
+    return page_response(f'''<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{labels[0]} · SaMaWi Dating</title><style>{COMMON_CSS}.wrap{{max-width:820px;margin:55px auto;padding:0 24px 70px}}.card{{background:#1b1d22;border:1px solid #30333b;border-radius:26px;padding:34px}}h1{{margin-top:0}}label.field{{display:block;margin:20px 0 8px;color:#c9cbd1}}input[type=text],input[type=number],textarea{{width:100%;padding:14px;border-radius:10px;border:1px solid #454954;background:#111318;color:#fff;font:inherit}}textarea{{min-height:130px;resize:vertical}}.choices{{display:flex;flex-wrap:wrap;gap:10px}}.choice{{border:1px solid #454954;border-radius:999px;padding:10px 14px;background:#111318}}button{{margin-top:28px;padding:14px 26px;border:0;border-radius:999px;background:#ff5c72;color:#fff;font-weight:800;font-size:16px}}.note{{color:#92959d;font-size:14px}}</style></head><body>{header_html(lang,True,path='/profile/setup')}<main class="wrap"><section class="card"><h1>{labels[0]}</h1><form method="post" action="/api/profile?lang={lang}"><label class="field">{labels[1]}</label><input type="text" name="display_name" maxlength="60" value="{current_name}" required><label class="field">{labels[2]}</label><textarea name="bio" maxlength="1500">{current_bio}</textarea><label class="field">PLZ</label><input type="text" name="postal_code" maxlength="16" required><label class="field">Ort</label><input type="text" name="location_label" maxlength="100" value="{current_location}" required><label class="field">Region / Bundesland</label><input type="text" name="region" maxlength="100" value="{current_region}" required><label class="field">Land</label><input type="text" name="country_code" maxlength="2" value="{current_country}" placeholder="AT" required><p class="note">{labels[7]}</p><label class="field">{labels[5]}</label><div class="choices">{checks}</div><button>{labels[6]}</button></form></section></main></body></html>''',lang)
 
 @app.post("/api/profile")
 async def save_profile(request: Request):
@@ -152,13 +154,14 @@ async def save_profile(request: Request):
     parsed=urllib.parse.parse_qs((await request.body()).decode("utf-8"),keep_blank_values=True)
     name=str(parsed.get("display_name",[""])[0]).strip()
     bio=str(parsed.get("bio",[""])[0]).strip()
+    postal_code=str(parsed.get("postal_code",[""])[0]).strip()
     location=str(parsed.get("location_label",[""])[0]).strip()
-    try: radius=max(1,min(500,int(parsed.get("radius_km",["50"])[0])))
-    except: radius=50
-    if not name or not location:
+    region=str(parsed.get("region",[""])[0]).strip()
+    country=str(parsed.get("country_code",[""])[0]).strip().upper()
+    if not name or not postal_code or not location or not region or len(country)!=2:
         return HTMLResponse("Missing profile data",status_code=400)
     env=request.scope["env"]; uid=str(session.user_id)
-    await env.DB.prepare("INSERT INTO profiles (user_id,display_name,bio,locality) VALUES (?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name,bio=excluded.bio,locality=excluded.locality").bind(uid,name,bio,location).run()
+    await env.DB.prepare("INSERT INTO profiles (user_id,display_name,bio,country_code,region,locality) VALUES (?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET display_name=excluded.display_name,bio=excluded.bio,country_code=excluded.country_code,region=excluded.region,locality=excluded.locality").bind(uid,name,bio,country,region,location).run()
     await env.DB.prepare("DELETE FROM profile_intentions WHERE user_id=?").bind(uid).run()
     for code in parsed.get("intentions",[]):
         if code in ("relationship","dating","friendship","activities","friends_plus","adventure"):
