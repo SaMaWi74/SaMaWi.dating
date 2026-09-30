@@ -153,12 +153,18 @@ document.getElementById('profile_photo').addEventListener('change',async e=>{{
   const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
   canvas.getContext('2d').drawImage(bitmap,0,0,w,h);bitmap.close();
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',0.82));
-  if(!blob) return;
-  const dt=new DataTransfer(),base=file.name.replace(/\.[^.]+$/,'')||'profile';
-  dt.items.add(new File([blob],base+'.webp',{{type:'image/webp',lastModified:Date.now()}}));
-  input.files=dt.files;
-  name.textContent=base+'.webp · '+Math.max(1,Math.round(blob.size/1024))+' KB';
- }}catch(err){{console.warn('Photo optimization skipped',err)}}
+  if(!blob) throw new Error('Image conversion failed');
+  const base=file.name.replace(/\.[^.]+$/,'')||'profile';
+  const optimized=new File([blob],base+'.webp',{{type:'image/webp',lastModified:Date.now()}});
+  name.textContent=base+'.webp · '+Math.max(1,Math.round(blob.size/1024))+' KB · Upload…';
+  const data=new FormData();data.append('profile_photo',optimized);
+  const response=await fetch('/api/profile/photo/upload?lang={lang}',{{method:'POST',body:data,credentials:'same-origin'}});
+  if(!response.ok) throw new Error('Upload failed');
+  window.location.reload();
+ }}catch(err){{
+  console.error(err);
+  name.textContent=file.name+' · Upload fehlgeschlagen';
+ }}
 }});
 const countryNames=new Intl.DisplayNames(['{lang}'],{{type:'region'}});
 const codes='AD AE AF AG AI AL AM AO AR AS AT AU AW AX AZ BA BB BD BE BF BG BH BI BJ BL BM BN BO BQ BR BS BT BW BY BZ CA CC CD CF CG CH CI CK CL CM CN CO CR CU CV CW CX CY CZ DE DJ DK DM DO DZ EC EE EG EH ER ES ET FI FJ FK FM FO FR GA GB GD GE GF GG GH GI GL GM GN GP GQ GR GS GT GU GW GY HK HM HN HR HT HU ID IE IL IM IN IO IQ IR IS IT JE JM JO JP KE KG KH KI KM KN KP KR KW KY KZ LA LB LC LI LK LR LS LT LU LV LY MA MC MD ME MF MG MH MK ML MM MN MO MP MQ MR MS MT MU MV MW MX MY MZ NA NC NE NF NG NI NL NO NP NR NU NZ OM PA PE PF PG PH PK PL PM PN PR PS PT PW PY QA RE RO RS RU RW SA SB SC SD SE SG SH SI SJ SK SL SM SN SO SR SS ST SV SX SY SZ TC TD TF TG TH TJ TK TL TM TN TO TR TT TV TW TZ UA UG UM US UY UZ VA VC VE VG VI VN VU WF WS XK YE YT ZA ZM ZW'.split(' ');
@@ -247,6 +253,33 @@ async def places(request: Request):
     except Exception as exc:
         print("PLACE_SEARCH error="+str(exc)[:200])
         return JSONResponse([])
+
+@app.post("/api/profile/photo/upload")
+async def upload_profile_photo(request: Request):
+    lang=lang_for(request)
+    token=request.cookies.get("samawi_session","")
+    session=None
+    if token:
+        session=await request.scope["env"].DB.prepare("SELECT user_id FROM sessions WHERE token=? AND expires_at > datetime('now') LIMIT 1").bind(token).first()
+    if not session:
+        return HTMLResponse("",status_code=401)
+    form=await request.form()
+    photo=form.get("profile_photo")
+    if not photo or not getattr(photo,"filename",""):
+        return HTMLResponse("Missing profile photo",status_code=400)
+    data=await photo.read()
+    photo_type=str(getattr(photo,"content_type","") or "")
+    if photo_type not in ("image/jpeg","image/png","image/webp") or len(data)>3*1024*1024:
+        return HTMLResponse("Invalid profile photo",status_code=400)
+    env=request.scope["env"]; uid=str(session.user_id)
+    ext={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[photo_type]
+    photo_key="profiles/"+uid+"/"+str(uuid.uuid4())+"."+ext
+    existing=await env.DB.prepare("SELECT profile_photo_key FROM profiles WHERE user_id=? LIMIT 1").bind(uid).first()
+    await env.PHOTOS.put(photo_key,data)
+    await env.DB.prepare("UPDATE profiles SET profile_photo_key=? WHERE user_id=?").bind(photo_key,uid).run()
+    if existing and existing.profile_photo_key and str(existing.profile_photo_key)!=photo_key:
+        await env.PHOTOS.delete(str(existing.profile_photo_key))
+    return {"ok":True}
 
 @app.post("/api/profile")
 async def save_profile(request: Request):
