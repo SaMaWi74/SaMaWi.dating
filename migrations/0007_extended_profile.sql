@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS profile_diets (
 
 CREATE TABLE IF NOT EXISTS interest_categories (
     code TEXT PRIMARY KEY,
+    label_de TEXT,
+    label_en TEXT,
+    label_fr TEXT,
+    label_it TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0
 );
 
@@ -39,6 +43,9 @@ CREATE TABLE IF NOT EXISTS interests (
     code TEXT PRIMARY KEY,
     category_code TEXT NOT NULL,
     label_de TEXT NOT NULL,
+    label_en TEXT,
+    label_fr TEXT,
+    label_it TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (category_code) REFERENCES interest_categories(code)
 );
@@ -54,6 +61,9 @@ CREATE TABLE IF NOT EXISTS profile_interests (
 CREATE TABLE IF NOT EXISTS interview_questions (
     code TEXT PRIMARY KEY,
     question_de TEXT NOT NULL,
+    question_en TEXT,
+    question_fr TEXT,
+    question_it TEXT,
     sort_order INTEGER NOT NULL DEFAULT 0
 );
 
@@ -66,11 +76,26 @@ CREATE TABLE IF NOT EXISTS profile_interview_answers (
     FOREIGN KEY (question_code) REFERENCES interview_questions(code)
 );
 
-INSERT OR IGNORE INTO interest_categories(code,sort_order) VALUES
-('film',10),('music',20),('outdoor',30),('indoor',40),('going_out',50),('art_making',60),
-('music_making',70),('literature',80),('collecting',90),('sciences',100),('travel',110),
-('destinations',120),('water_sports',130),('winter_sports',140),('martial_arts',150),
-('fitness',160),('endurance',170),('extreme_sports',180),('ball_sports',190);
+INSERT OR IGNORE INTO interest_categories(code,label_de,label_en,label_fr,label_it,sort_order) VALUES
+('film','Filmgeschmack','Movies','Films','Film',10),
+('music','Musikgeschmack','Music','Musique','Musica',20),
+('outdoor','Outdoor-Aktivitäten','Outdoor activities','Activités de plein air','Attività all’aperto',30),
+('indoor','Indoor-Aktivitäten','Indoor activities','Activités en intérieur','Attività al chiuso',40),
+('going_out','Ausgehen','Going out','Sorties','Uscire',50),
+('art_making','Kunst selber machen','Making art','Créer de l’art','Fare arte',60),
+('music_making','Musik selber machen','Making music','Faire de la musique','Fare musica',70),
+('literature','Literatur','Literature','Littérature','Letteratura',80),
+('collecting','Ich sammle','Collecting','Collections','Collezionismo',90),
+('sciences','Wissenschaften','Sciences & knowledge','Sciences et savoir','Scienze e conoscenza',100),
+('travel','Reisen','Travel','Voyages','Viaggi',110),
+('destinations','Reiseziele','Destinations','Destinations','Destinazioni',120),
+('water_sports','Wassersport','Water sports','Sports nautiques','Sport acquatici',130),
+('winter_sports','Wintersport','Winter sports','Sports d’hiver','Sport invernali',140),
+('martial_arts','Kampfsport','Martial arts','Arts martiaux','Arti marziali',150),
+('fitness','Fitness','Fitness','Fitness','Fitness',160),
+('endurance','Ausdauersport','Endurance sports','Sports d’endurance','Sport di resistenza',170),
+('extreme_sports','Extremsport','Extreme sports','Sports extrêmes','Sport estremi',180),
+('ball_sports','Ballsport','Ball sports','Sports de balle','Sport con la palla',190);
 
 INSERT OR IGNORE INTO interview_questions(code,question_de,sort_order) VALUES
 ('describe_yourself','Beschreibe dich in ein paar Sätzen',10),
